@@ -657,6 +657,7 @@
   }
 
   document.addEventListener("mouseup", (e) => {
+    if (settings.enabled === false || isHostBlacklisted()) { hideSelBtn(); return; }
     if (e.target.closest && e.target.closest(
       ".vocab-note-sel-btn, .vocab-note-mini-card, .vocab-note-tooltip, .vocab-note-modal-overlay"
     )) return;
@@ -1159,10 +1160,13 @@
     let needRescan = false;
     if (changes.settings) {
       settings = { ...settings, ...(changes.settings.newValue || {}) };
+      // Tắt extension → ẩn ngay thanh chọn (selection popup) đang hiển thị
+      if (settings.enabled === false) hideSelBtn();
       // Áp ngay màu/kiểu/độ dày highlight (kể cả khi không đổi danh sách từ)
       applyHighlightVars();
       // Kiểm tra blacklist trang hiện tại
       if (isHostBlacklisted()) {
+        hideSelBtn();
         removeAllHighlights();
         words = changes.words ? (changes.words.newValue || []) : words;
         rebuildIndex();
