@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "Highlight Note – Tô sáng, ghi chú & dịch web",
+  "version": "1.0.0",
+  "description": "Tô sáng từ & cụm từ trên mọi trang web, ghi chú, tự dịch và ôn lại — đa ngôn ngữ, lưu cục bộ, không theo dõi.",
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "activeTab",
+    "alarms",
+    "identity",
+    "downloads"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "oauth2": {
+    "client_id": "53595916112-gffs5nu8jfiiidd3ipvhcgikf4sf84ha.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Highlight Note"
+  },
+  "options_page": "options.html",
+  "commands": {
+    "add-selected-word": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+V"
+      },
+      "description": "Tô sáng & lưu phần đang bôi đen vào Highlight Note"
+    },
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y"
+      },
+      "description": "Mở Highlight Note"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon16.png", "icons/icon48.png"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

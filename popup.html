@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <img src="icons/icon48.png" alt="" class="brand-logo" />
+      <h1>Highlight Note</h1>
+    </div>
+    <div class="header-right">
+      <span class="sync-dot" id="syncDot" title="Trạng thái đồng bộ">⟳</span>
+      <label class="switch" title="Bật/tắt highlight toàn bộ">
+        <input type="checkbox" id="enabledToggle" />
+        <span class="slider"></span>
+      </label>
+      <span class="count" id="count">0</span>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div class="backup-banner" id="backupBanner" style="display:none"></div>
+
+  <div class="composer" id="composer">
+    <button class="composer-toggle" id="composerToggle" aria-expanded="false" title="Thêm mục mới">
+      <svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      <span>Thêm từ hoặc cụm từ</span>
+      <svg class="composer-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    </button>
+    <div class="composer-body">
+      <textarea id="termInput" rows="1" placeholder="Từ, cụm từ, thuật ngữ, viết tắt hoặc cả đoạn..."></textarea>
+      <input type="text" id="meaningInput" placeholder="Nghĩa" />
+      <input type="text" id="noteInput" placeholder="Ghi chú (tuỳ chọn)" />
+      <div class="row-2">
+        <button id="addBtn">+ Thêm</button>
+        <button id="bulkBtn" title="Thêm nhiều mục cùng lúc">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>Bulk
+        </button>
+        <button id="quizBtn" title="Ôn tập các mục đã lưu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>Ôn tập
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-bar">
+    <div class="search-field">
+      <svg class="search-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="searchInput" placeholder="Tìm từ hoặc nghĩa..." />
+    </div>
+    <div class="filters">
+      <select id="sortSel" title="Sắp xếp">
+        <option value="newest">↓ Mới nhất</option>
+        <option value="oldest">↑ Cũ nhất</option>
+        <option value="alpha">A→Z</option>
+        <option value="hoverDesc">Hover nhiều</option>
+        <option value="hoverAsc">Hover ít</option>
+        <option value="closest">Sắp thuộc</option>
+      </select>
+      <select id="filterSel" title="Lọc">
+        <option value="all">Tất cả</option>
+        <option value="new">Mới</option>
+        <option value="warm">Đang học</option>
+        <option value="hot">Sắp thuộc</option>
+        <option value="learned">Đã thuộc 🎓</option>
+        <option value="disabled">Đã tắt</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <div class="site-bar" id="siteBar"></div>
+
+  <div class="toolbar">
+    <button id="rescanBtn" class="ic-btn" title="Quét lại trang hiện tại">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+    </button>
+    <button id="exportBtn" class="ic-btn" title="Xuất file JSON (backup)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+    </button>
+    <button id="importBtn" class="ic-btn" title="Nhập file JSON (mở trong Cài đặt)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+    </button>
+    <input type="file" id="importFile" accept="application/json" hidden />
+    <button id="windowBtn" class="ic-btn" title="Mở cửa sổ riêng (để gõ tiếng Việt)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+    </button>
+    <button id="optionsBtn" class="ic-btn" title="Cài đặt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
+  </div>
+
+  <!-- Confirm/Alert generic modal -->
+  <div class="modal-overlay" id="dlgModal" style="display:none">
+    <div class="modal">
+      <h3 id="dlgTitle">Thông báo</h3>
+      <div id="dlgBody"></div>
+      <div class="actions" id="dlgActions"></div>
+    </div>
+  </div>
+
+  <!-- Inline toast -->
+  <div id="toast" class="popup-toast" style="display:none"></div>
+
+  <!-- Bulk add modal -->
+  <div class="modal-overlay" id="bulkModal" style="display:none">
+    <div class="modal">
+      <h3>Thêm nhiều từ cùng lúc</h3>
+      <p class="hint">Mỗi dòng 1 từ. Định dạng: <code>word - nghĩa - ghi chú</code> hoặc chỉ <code>word</code>.</p>
+      <textarea id="bulkText" rows="10" placeholder="ubiquitous - có mặt khắp nơi&#10;serendipity - may mắn tình cờ - hay dùng trong văn nói&#10;ephemeral"></textarea>
+      <div class="actions">
+        <button id="bulkCancel" class="btn-cancel">Huỷ</button>
+        <button id="bulkSave" class="btn-primary">Thêm tất cả</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz modal -->
+  <div class="modal-overlay" id="quizModal" style="display:none">
+    <div class="modal quiz">
+      <h3>🎯 Ôn tập</h3>
+      <div class="quiz-progress" id="quizProgress"></div>
+      <div class="quiz-card" id="quizCard"></div>
+      <div class="actions" id="quizActions"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

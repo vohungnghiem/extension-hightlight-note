@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Highlight Note – Cài đặt</title>
+  <style>
+    :root {
+      --brand: #5b56e0;
+      --brand-strong: #4338ca;
+      --brand-ink: #3730a3;
+      --brand-weak: #eef0ff;
+      --accent: #fbbf24;
+      --ink: #1f2230;
+      --ink-soft: #555a6b;
+      --ink-faint: #8b90a0;
+      --bg: #f6f7fb;
+      --surface: #fff;
+      --line: #e8eaf1;
+      --danger: #e11d48;
+      --ok: #16a34a;
+      --radius: 12px;
+      --ring: 0 0 0 3px rgba(91, 86, 224, 0.18);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+      color: var(--ink);
+      background: var(--bg);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    .brand-head {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 8px;
+    }
+    .brand-head img { width: 44px; height: 44px; border-radius: 11px; box-shadow: 0 2px 8px rgba(67,56,202,0.25); }
+    .brand-head h1 { font-size: 22px; margin: 0; color: var(--brand-ink); font-weight: 800; letter-spacing: 0.2px; }
+    .brand-head p { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      margin-top: 18px;
+      box-shadow: 0 1px 2px rgba(20,22,40,0.05);
+    }
+    .card-title {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px;
+      color: var(--ink-faint); font-weight: 700; margin: 0 0 14px;
+    }
+    .row { margin-bottom: 20px; }
+    .row:last-child { margin-bottom: 0; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
+    input[type=number], input[type=color] {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fbfcfe;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    select {
+      width: 100%;
+      padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px;
+      font-size: 14px; font-weight: 600; color: var(--ink);
+      background: #fbfcfe; cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    select:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); background: #fff; }
+    input[type=number] { width: 120px; }
+    input[type=color] { width: 52px; height: 38px; padding: 4px; cursor: pointer; }
+    input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); background: #fff; }
+    .check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+    .check input { width: 16px; height: 16px; accent-color: var(--brand); }
+    .hint { color: var(--ink-faint); font-size: 12.5px; margin-top: 6px; }
+    textarea {
+      width: 100%; padding: 10px; border: 1px solid var(--line);
+      border-radius: 8px; font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 13px; background: #fbfcfe; resize: vertical;
+    }
+    button {
+      padding: 10px 20px;
+      background: var(--brand);
+      color: #fff; border: none; border-radius: 8px;
+      cursor: pointer; font-size: 14px; font-weight: 600;
+      transition: background 0.15s, transform 0.05s;
+    }
+    button:hover { background: var(--brand-strong); }
+    button:active { transform: translateY(1px); }
+    .danger { background: var(--danger); }
+    .danger:hover { background: #be123c; }
+    .card.danger-zone { border-color: #fecdd6; background: #fff7f8; }
+    .card.danger-zone .card-title { color: var(--danger); }
+
+    /* Đồng bộ */
+    .sync-state { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 4px; }
+    .badge { font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
+    .badge.sync { background: var(--brand-weak); color: var(--brand-ink); }
+    .badge.drive { background: #e7f6ec; color: #15803d; }
+    .badge.off { background: #f1f2f6; color: var(--ink-faint); }
+    .meter { height: 7px; background: #eef0f5; border-radius: 999px; overflow: hidden; margin: 7px 0 4px; }
+    .meter > i { display: block; height: 100%; background: var(--brand); transition: width 0.3s; }
+    .meter.warn > i { background: var(--accent); }
+    .meter.full > i { background: var(--danger); }
+    .drive-warn {
+      color: #9f1239; font-weight: 600; font-size: 13px;
+      background: #fff1f2; border: 1px solid #fecdd3; border-radius: 9px; padding: 10px 12px;
+    }
+
+    /* Nhóm nút có nhãn để khỏi nhầm cái nào của cái nào */
+    .action-group { margin-top: 18px; }
+    .action-label {
+      display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--ink-faint); font-weight: 700; margin-bottom: 8px;
+    }
+    /* Nút trong khu đồng bộ: to, cân đối, có icon canh giữa */
+    .sync-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .sync-actions button {
+      flex: 1 1 auto; min-width: 150px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 11px 16px; border-radius: 9px;
+    }
+    /* Phân màu theo vai trò */
+    .btn-soft { background: var(--brand-weak); color: var(--brand-ink); }
+    .btn-soft:hover { background: #e2e4ff; }
+    .btn-outline { background: #fff; color: var(--brand-ink); border: 1px solid var(--brand); }
+    .btn-outline:hover { background: var(--brand-weak); }
+    .btn-danger-soft { background: #fff1f3; color: var(--danger); border: 1px solid #fecdd6; }
+    .btn-danger-soft:hover { background: #ffe4e8; }
+    /* Nút chính nổi bật khi CHƯA kết nối Drive (việc nên làm nhất) */
+    .cta-primary {
+      background: var(--brand) !important; color: #fff !important; border: none !important;
+      flex-basis: 100% !important; font-size: 15px; padding: 13px 18px !important;
+      box-shadow: 0 6px 16px rgba(91,86,224,0.32);
+    }
+    .cta-primary:hover { background: var(--brand-strong) !important; }
+
+    /* Bảng trạng thái thân thiện — đổi màu theo mức an toàn */
+    .status-box {
+      margin-top: 16px; border: 1px solid var(--line); border-left: 4px solid var(--line);
+      border-radius: 10px; background: #fbfcff; padding: 14px 16px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .status-box.safe { background: #f0fdf4; border-color: #bbf7d0; border-left-color: var(--ok); }
+    .status-box.warn-state { background: #fffbeb; border-color: #fde68a; border-left-color: var(--accent); }
+    .status-box.off-state { background: #f8f9fc; border-color: var(--line); border-left-color: #cbd0db; }
+    .status-line { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; }
+    .status-line + .status-line { border-top: 1px dashed rgba(0,0,0,0.08); }
+    .status-line:first-child .status-main { font-size: 15px; }
+    .status-ico { font-size: 19px; width: 24px; text-align: center; flex: none; line-height: 1.4; }
+    .status-main { font-weight: 700; color: var(--ink); }
+    .status-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+    .dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: #cfd3df; margin-top: 5px; }
+    .dot.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(22,163,74,0.15); }
+    .dot.off { background: #cbd0db; }
+    .dot.warn { background: var(--danger); box-shadow: 0 0 0 3px rgba(225,29,72,0.15); }
+
+    /* Tiêu đề vùng — tách các khu lớn cho dễ nhìn */
+    .section-head {
+      margin: 34px 4px 0; font-size: 13px; font-weight: 800; color: var(--brand-ink);
+      letter-spacing: 0.3px; display: flex; align-items: center; gap: 10px; text-transform: uppercase;
+    }
+    .section-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+    /* Chip "Tự động lưu" nổi góc dưới — phản hồi tức thì khi chỉnh cài đặt */
+    .autosave-pill {
+      position: fixed; right: 18px; bottom: 18px;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 999px; padding: 9px 16px;
+      box-shadow: 0 6px 20px rgba(20,22,40,0.14);
+      font-size: 13px; font-weight: 700; color: var(--ink-faint);
+      z-index: 50; transition: color .2s, background .2s, border-color .2s, transform .2s;
+    }
+    .autosave-pill .ap-ico { font-size: 14px; line-height: 1; }
+    .autosave-pill.saving { color: var(--brand-ink); border-color: var(--brand); }
+    .autosave-pill.saved { color: var(--ok); border-color: #bbf7d0; background: #f0fdf4; transform: translateY(-2px); }
+    @keyframes ap-spin { to { transform: rotate(360deg); } }
+    .autosave-pill.saving .ap-ico { display: inline-block; animation: ap-spin .7s linear infinite; }
+
+    /* Ghi chú tự động lưu thay cho nút Lưu cũ */
+    .autosave-note .autosave-inline { display: flex; align-items: flex-start; gap: 12px; }
+    .autosave-note .an-ico {
+      width: 30px; height: 30px; flex: none; border-radius: 50%;
+      background: #f0fdf4; color: var(--ok); display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 800;
+    }
+    .autosave-note .an-title { font-weight: 800; color: var(--ink); margin-bottom: 2px; }
+
+    /* Thanh trượt độ dày */
+    input[type=range] { width: 100%; max-width: 280px; accent-color: var(--brand); cursor: pointer; vertical-align: middle; }
+    .thick-val { font-weight: 700; color: var(--brand-ink); font-size: 12.5px; margin-left: 6px; }
+
+    /* Ô xem trước highlight — mô phỏng đúng cách hiển thị trên web */
+    .hl-preview {
+      padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px;
+      background: #fff; font-size: 16px; line-height: 2.1; color: var(--ink);
+    }
+    .hl-preview .vocab-note-highlight {
+      border-bottom: var(--vocab-thickness, 2px) dotted var(--vocab-color, #ffeb3b);
+      padding: 0 1px;
+    }
+    .hl-preview .vocab-note-highlight[data-level="warm"] { border-bottom-style: dashed; }
+    .hl-preview .vocab-note-highlight[data-level="hot"]  { border-bottom-style: solid; opacity: .85; }
+    .hl-preview[data-vocab-style="background"] .vocab-note-highlight {
+      border-bottom: none; background: var(--vocab-color); color: var(--vocab-text-color, #000);
+      border-radius: 3px; padding: 0 3px;
+    }
+    .hl-preview[data-vocab-style="background"] .vocab-note-highlight[data-level="warm"] { opacity: .85; }
+    .hl-preview[data-vocab-style="background"] .vocab-note-highlight[data-level="hot"]  { opacity: .6; }
+    .hl-preview[data-vocab-style="wavy"] .vocab-note-highlight {
+      border-bottom: none; text-decoration: underline; text-decoration-style: wavy;
+      text-decoration-color: var(--vocab-color); text-decoration-thickness: var(--vocab-thickness, 2px);
+      text-underline-offset: 3px;
+    }
+    .hl-preview[data-vocab-style="wavy"] .vocab-note-highlight[data-level="hot"] { opacity: .85; }
+    .hl-preview[data-vocab-style="outline"] .vocab-note-highlight {
+      border: var(--vocab-thickness, 2px) solid var(--vocab-color); border-radius: 4px; padding: 0 3px;
+    }
+    .hl-preview .pv-tag {
+      font-size: 11px; color: var(--ink-faint); font-weight: 700; margin-left: 4px;
+      vertical-align: super; text-decoration: none !important; border: none !important; opacity: .7;
+    }
+  </style>
+</head>
+<body>
+  <div class="brand-head">
+    <img src="icons/icon128.png" alt="Highlight Note" />
+    <div>
+      <h1>Highlight Note</h1>
+      <p>Cài đặt &middot; tô sáng, ghi chú &amp; ôn lại trên web</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Ôn tập &amp; tiến độ</p>
+
+    <div class="row">
+      <label class="check"><input type="checkbox" id="showReview" /> Hiện nút Ôn tập</label>
+      <div class="hint">Tắt nếu bạn chỉ dùng để tô sáng &amp; ghi chú, không cần ôn lại — nút "Ôn tập" sẽ ẩn khỏi popup.</div>
+    </div>
+
+    <div class="row">
+      <label for="threshold">Ngưỡng mặc định cho mục mới (số lần hover)</label>
+      <input type="number" id="threshold" min="1" max="200" value="20" />
+      <div class="hint">Số lần hover trước khi extension nhắc bạn xem đã nhớ chưa.</div>
+    </div>
+
+    <div class="row">
+      <label for="extendBy">Số lần gia hạn khi đạt ngưỡng</label>
+      <input type="number" id="extendBy" min="1" max="200" value="20" />
+      <div class="hint">Khi vượt ngưỡng, ngưỡng tự cộng thêm bấy nhiêu lần (KHÔNG xoá tự động). Bạn xoá thủ công khi đã nhớ.</div>
+    </div>
+
+    <div class="row">
+      <label for="cooldown">Cooldown đếm hover (giây)</label>
+      <input type="number" id="cooldown" min="1" max="86400" value="300" />
+      <div class="hint">Sau khi đếm 1 lần hover cho 1 mục, phải chờ bấy nhiêu giây mới được đếm lại. Mặc định 300s (5 phút) để phản ánh chính xác khả năng ghi nhớ — tránh nhảy số liên tục khi rê chuột qua lại.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Hiển thị tô sáng</p>
+
+    <div class="row">
+      <label for="color">Màu tô sáng (highlight)</label>
+      <input type="color" id="color" value="#ffeb3b" />
+    </div>
+
+    <div class="row">
+      <label for="highlightStyle">Kiểu tô sáng</label>
+      <select id="highlightStyle">
+        <option value="underline">Gạch chân (mặc định)</option>
+        <option value="background">Tô nền (bút dạ quang)</option>
+        <option value="wavy">Gạch lượn sóng</option>
+        <option value="outline">Khung viền</option>
+      </select>
+      <div class="hint">Gạch chân đổi nét theo mức học: chấm (mới) → đứt (đang học) → liền (sắp thuộc). Các kiểu khác mờ dần khi sắp thuộc.</div>
+    </div>
+
+    <div class="row">
+      <label for="hlThickness">Độ dày nét <span class="thick-val" id="hlThicknessVal">2px</span></label>
+      <input type="range" id="hlThickness" min="1" max="5" step="1" value="2" />
+      <div class="hint">Áp dụng cho Gạch chân, Lượn sóng và Khung viền. (Kiểu Tô nền không dùng độ dày.)</div>
+    </div>
+
+    <div class="row">
+      <label>Xem trước</label>
+      <div class="hl-preview" id="hlPreview">
+        Đây là một <span class="vocab-note-highlight" data-level="new">ví dụ<span class="pv-tag">mới</span></span>
+        câu có <span class="vocab-note-highlight" data-level="warm">từ vựng<span class="pv-tag">đang học</span></span>
+        đang được <span class="vocab-note-highlight" data-level="hot">tô sáng<span class="pv-tag">sắp thuộc</span></span> theo cài đặt.
+      </div>
+    </div>
+
+    <div class="row">
+      <label class="check"><input type="checkbox" id="caseSensitive" /> Phân biệt hoa/thường</label>
+      <div class="hint">Mặc định tắt: "Apple" và "apple" coi như cùng một mục.</div>
+    </div>
+
+    <div class="row">
+      <label class="check"><input type="checkbox" id="showToasts" /> Hiện thông báo nhỏ (toast)</label>
+      <div class="hint">Các thông báo góc màn hình khi lưu/sửa/xoá từ (đã gắn icon Highlight Note để khỏi nhầm với web). Tắt nếu thấy phiền — khi tắt sẽ ẩn <b>toàn bộ</b> toast (kể cả nút "Hoàn tác" khi xoá).</div>
+    </div>
+
+    <div class="row">
+      <label for="blacklist">Domain không tô sáng (mỗi dòng 1 domain)</label>
+      <textarea id="blacklist" rows="4" placeholder="facebook.com&#10;mail.google.com"></textarea>
+      <div class="hint">Mở popup ở trang web → nút "Tắt trên site này" sẽ thêm domain vào đây.</div>
+    </div>
+  </div>
+
+  <div class="card autosave-note">
+    <div class="autosave-inline">
+      <span class="an-ico">✓</span>
+      <div>
+        <div class="an-title">Tự động lưu — không cần bấm nút</div>
+        <div class="hint" style="margin:0">Mọi thay đổi ở <b>Ôn tập &amp; tiến độ</b>, <b>Hiển thị tô sáng</b> và <b>Domain chặn</b> được lưu ngay khi bạn chỉnh. Chip "Tự động lưu" ở góc dưới sẽ báo mỗi khi lưu xong.</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-head">💾 Dữ liệu &amp; đồng bộ</p>
+
+  <div class="card">
+    <p class="card-title">Đồng bộ tài khoản</p>
+
+    <div class="row">
+      <label class="check"><input type="checkbox" id="syncEnabled" /> Bật đồng bộ tự động</label>
+      <div class="hint">Đồng bộ từ vựng giữa các máy. Export/Import JSON thủ công vẫn dùng được song song.</div>
+    </div>
+
+    <div class="row">
+      <label for="syncMode">Bạn muốn lưu từ vựng ở đâu?</label>
+      <select id="syncMode">
+        <option value="auto">⚡ Tự động (khuyên dùng)</option>
+        <option value="drive">☁ Luôn lưu vào Google Drive</option>
+      </select>
+      <div class="hint" id="syncModeHint">Tự động: lưu qua Tài khoản Chrome, khi đầy thì tự chuyển sang Google Drive.</div>
+    </div>
+
+    <!-- Bảng trạng thái dễ hiểu -->
+    <div class="status-box" id="syncStatusBox">
+      <div class="status-line">
+        <span class="status-ico" id="whereIco">📦</span>
+        <div>
+          <div class="status-main" id="whereTitle">Đang kiểm tra…</div>
+          <div class="status-sub" id="whereDesc"></div>
+        </div>
+      </div>
+
+      <div class="status-line">
+        <span class="status-ico"><span class="dot" id="driveDot"></span></span>
+        <div>
+          <div class="status-main" id="driveTitle">Google Drive</div>
+          <div class="status-sub" id="driveDesc"></div>
+        </div>
+      </div>
+
+      <div class="status-line" id="usageLine">
+        <span class="status-ico">📊</span>
+        <div style="flex:1; min-width:0">
+          <div class="status-main">Dung lượng (khi lưu qua Tài khoản Chrome)</div>
+          <div class="meter" id="syncMeter"><i style="width:0%"></i></div>
+          <div class="status-sub" id="syncUsage"></div>
+        </div>
+      </div>
+
+      <div class="status-sub" id="syncTime" style="margin-top:6px"></div>
+      <div class="drive-warn" id="syncWarn" style="display:none; margin-top:10px"></div>
+    </div>
+
+    <div class="action-group">
+      <span class="action-label">🔗 Quản lý Google Drive</span>
+      <div class="sync-actions">
+        <button id="connectDriveBtn" class="btn-soft">☁ Kết nối Google Drive</button>
+        <button id="openDriveBtn" class="btn-outline" style="display:none">🔗 Xem file trên Drive</button>
+        <button id="disconnectDriveBtn" class="btn-danger-soft" style="display:none">⏏ Ngắt kết nối</button>
+      </div>
+    </div>
+
+    <div class="action-group">
+      <span class="action-label">🔄 Đồng bộ</span>
+      <div class="sync-actions">
+        <button id="syncNowBtn" class="btn-soft">🔄 Đồng bộ ngay</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Bình thường <b>không cần bấm gì</b> — tự đồng bộ khi bạn thêm/sửa từ. Nút này chỉ để ép cập nhật liền.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Sao lưu &amp; khôi phục (file JSON)</p>
+    <div class="hint" style="margin-bottom:4px">Tách biệt với đồng bộ tự động ở trên — dùng khi muốn tự giữ 1 file backup hoặc chuyển máy offline.</div>
+    <div class="action-group">
+      <span class="action-label">💾 Sao lưu / khôi phục thủ công</span>
+      <div class="sync-actions">
+        <button id="exportBtn" class="btn-soft">⬇ Tải file backup về máy</button>
+        <button id="importBtn" class="btn-outline">⬆ Nạp lại từ file backup</button>
+        <input type="file" id="importFile" accept="application/json" hidden />
+      </div>
+      <div class="hint" style="margin-top:8px"><span id="ioStatus"></span></div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <label class="check"><input type="checkbox" id="autoBackup" /> Tự động lưu file backup vào máy mỗi tuần</label>
+      <div class="hint">Cứ 7 ngày, extension tự tải 1 file backup vào thư mục Tải về (ghi đè 1 file duy nhất). File này nằm trên máy nên <b>vẫn còn kể cả khi gỡ extension</b>.</div>
+    </div>
+    <div class="action-group" style="margin-top:8px">
+      <div class="sync-actions">
+        <button id="backupNowBtn" class="btn-soft">💾 Sao lưu ngay vào máy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Hướng dẫn</p>
+    <div class="row">
+      <label>Xem lại hướng dẫn dùng &amp; cách ghim icon</label>
+      <button id="openWelcomeBtn">📖 Mở trang hướng dẫn</button>
+      <div class="hint">Mở lại trang chào mừng với hướng dẫn ghim biểu tượng lên thanh công cụ.</div>
+    </div>
+  </div>
+
+  <div class="card danger-zone">
+    <p class="card-title">Vùng nguy hiểm</p>
+    <div class="row">
+      <label>Xoá toàn bộ dữ liệu</label>
+      <button id="clearBtn" class="danger">🗑 Xoá hết dữ liệu</button>
+      <div class="hint">Cẩn thận! Hành động này không thể hoàn tác. Nên Export trước.</div>
+    </div>
+  </div>
+
+  <div class="autosave-pill" id="autosavePill">
+    <span class="ap-ico" id="apIco">✓</span>
+    <span id="apText">Tự động lưu</span>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

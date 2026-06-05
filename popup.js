@@ -1,0 +1,781 @@
+// Popup: quản lý danh sách, sort/filter, stats, bulk add, quiz, backup nhắc
+
+const $ = (id) => document.getElementById(id);
+let words = [];
+let settings = {};
+
+// Bộ icon SVG dùng chung (nét đồng nhất, ăn theo màu chữ) — thay cho emoji rời rạc
+const svg = (paths) =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+const ICON = {
+  learn: svg('<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/>'),
+  unlearn: svg('<polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>'),
+  bell: svg('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>'),
+  bellOff: svg('<path d="M13.7 21a2 2 0 0 1-3.4 0"/><path d="M18 8a6 6 0 0 0-9.3-5"/><path d="M6 8c0 7-3 9-3 9h13"/><line x1="2" y1="2" x2="22" y2="22"/>'),
+  edit: svg('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>'),
+  del: svg('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'),
+  save: svg('<polyline points="20 6 9 17 4 12"/>'),
+  cancel: svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),
+  speak: svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>')
+};
+
+// Phát âm bằng giọng theo ngôn ngữ (dùng cho mục note dịch thuật)
+function speakTerm(text, lang) {
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+// Phân biệt 2 chế độ: popup mặc định vs cửa sổ riêng
+const urlParams = new URLSearchParams(location.search);
+const isWindowMode = urlParams.get("window") === "1";
+const focusTarget = urlParams.get("focus");
+
+// Trong window mode, sau khi lưu xong sẽ tự đóng cửa sổ (tránh window mồ côi)
+function autoCloseIfWindow() {
+  if (!isWindowMode) return;
+  setTimeout(() => {
+    try {
+      chrome.windows.getCurrent((w) => {
+        if (w && w.id != null) chrome.windows.remove(w.id);
+        else window.close();
+      });
+    } catch (e) { window.close(); }
+  }, 500);
+}
+
+function load() {
+  chrome.storage.local.get(["words", "settings"], (data) => {
+    words = data.words || [];
+    settings = data.settings || { defaultThreshold: 20 };
+    if (settings.enabled === undefined) settings.enabled = true;
+    // Migration: gán lang cho từ cũ
+    let migrated = false;
+    for (const w of words) {
+      if (!w.lang) { w.lang = detectLang(w.term); migrated = true; }
+    }
+    if (migrated) save();
+    $("enabledToggle").checked = settings.enabled;
+    applyComposerState();
+    render();
+    renderBackupBanner();
+    refreshSyncDot();
+  });
+}
+
+// Chỉ báo trạng thái đồng bộ ở header (hỏi service worker).
+function refreshSyncDot() {
+  const dot = $("syncDot");
+  if (!dot) return;
+  chrome.runtime.sendMessage({ type: "SYNC_STATUS" }, (s) => {
+    if (chrome.runtime.lastError || !s) { dot.style.display = "none"; return; }
+    dot.style.display = "";
+    dot.classList.remove("syncing", "ok", "drive", "warn", "off");
+    if (!s.enabled) {
+      dot.classList.add("off"); dot.textContent = "⟳";
+      dot.title = "Đồng bộ đang tắt";
+    } else if (s.needsDriveAuth || s.lastPushError) {
+      dot.classList.add("warn"); dot.textContent = "⚠";
+      dot.title = s.lastPushError || "Cần kết nối Google Drive — mở Cài đặt";
+    } else if (s.mode === "drive") {
+      dot.classList.add("drive"); dot.textContent = "☁";
+      dot.title = "Đang đồng bộ qua Google Drive";
+    } else {
+      dot.classList.add("ok"); dot.textContent = "⟳";
+      dot.title = "Đã đồng bộ qua tài khoản (Storage Sync)";
+    }
+  });
+}
+
+// Khu thêm gập/mở + ẩn nút Ôn tập theo cài đặt
+function applyComposerState() {
+  const c = $("composer");
+  c.classList.toggle("open", settings.composerOpen === true);
+  $("composerToggle").setAttribute("aria-expanded", settings.composerOpen === true ? "true" : "false");
+  c.classList.toggle("no-review", settings.showReview === false);
+}
+function setComposerOpen(open) {
+  settings.composerOpen = open;
+  applyComposerState();
+  saveSettings();
+  if (open) setTimeout(() => $("termInput").focus(), 60);
+}
+$("composerToggle").onclick = () => setComposerOpen(!$("composer").classList.contains("open"));
+
+function saveSettings() { chrome.storage.local.set({ settings }); }
+function save() { chrome.storage.local.set({ words }); }
+
+$("enabledToggle").addEventListener("change", () => {
+  settings.enabled = $("enabledToggle").checked;
+  saveSettings();
+  render();
+});
+
+// ---------- Helpers ----------
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function formatDate(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("vi-VN");
+}
+function levelOf(w) {
+  if (w.learned) return "learned";
+  const p = (w.hoverCount || 0) / (w.autoDeleteAt || 20);
+  if (p >= 0.7) return "hot";
+  if (p >= 0.3) return "warm";
+  return "new";
+}
+
+function debounce(fn, ms) {
+  let h;
+  return (...args) => { clearTimeout(h); h = setTimeout(() => fn(...args), ms); };
+}
+function newId() {
+  return "w_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+}
+function detectLang(s) {
+  return /[぀-ゟ゠-ヿ一-鿿]/.test(s) ? "ja" : "en";
+}
+function imeSafe(handler) {
+  return (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    handler(e);
+  };
+}
+
+// ---------- Toast + Modal helpers (thay alert/confirm/prompt của trình duyệt) ----------
+function toast(msg, kind = "", onClickAction = null) {
+  const t = $("toast");
+  t.className = "popup-toast " + kind + (onClickAction ? " clickable" : "");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(t._timer);
+  t.onclick = onClickAction ? () => {
+    t.style.display = "none";
+    clearTimeout(t._timer);
+    onClickAction();
+  } : null;
+  t._timer = setTimeout(() => { t.style.display = "none"; t.onclick = null; },
+    onClickAction ? 6000 : 2500);
+}
+
+function dlgConfirm(title, body, opts = {}) {
+  return new Promise(resolve => {
+    $("dlgTitle").textContent = title;
+    $("dlgBody").textContent = body;
+    $("dlgActions").innerHTML = `
+      <button class="btn-cancel" id="dlgCancel">${opts.cancelText || "Huỷ"}</button>
+      <button class="btn-primary" id="dlgOk">${opts.okText || "OK"}</button>
+    `;
+    $("dlgModal").style.display = "flex";
+    $("dlgCancel").onclick = () => { $("dlgModal").style.display = "none"; resolve(false); };
+    $("dlgOk").onclick = () => { $("dlgModal").style.display = "none"; resolve(true); };
+  });
+}
+
+function dlgChoice(title, body, choices) {
+  // choices: [{label, value, kind}]
+  return new Promise(resolve => {
+    $("dlgTitle").textContent = title;
+    $("dlgBody").textContent = body;
+    $("dlgActions").innerHTML = choices
+      .map((c, i) => `<button class="${c.kind || "btn-primary"}" data-i="${i}">${c.label}</button>`)
+      .join("");
+    $("dlgModal").style.display = "flex";
+    $("dlgActions").querySelectorAll("button").forEach(b => {
+      b.onclick = () => { $("dlgModal").style.display = "none"; resolve(choices[+b.dataset.i].value); };
+    });
+  });
+}
+
+function dlgAlert(title, body) {
+  return new Promise(resolve => {
+    $("dlgTitle").textContent = title;
+    $("dlgBody").textContent = body;
+    $("dlgActions").innerHTML = `<button class="btn-primary" id="dlgOk">OK</button>`;
+    $("dlgModal").style.display = "flex";
+    $("dlgOk").onclick = () => { $("dlgModal").style.display = "none"; resolve(); };
+  });
+}
+
+// ---------- Stats ----------
+function renderStats() {
+  const total = words.length;
+  let n = 0, wa = 0, h = 0, d = 0, ln = 0;
+  for (const w of words) {
+    if (w.learned) { ln++; continue; }
+    if (w.disabled) { d++; continue; }
+    const lv = levelOf(w);
+    if (lv === "hot") h++;
+    else if (lv === "warm") wa++;
+    else n++;
+  }
+  $("stats").innerHTML = `
+    <span><b>${total}</b>Tổng</span>
+    <span class="s-new"><b>${n}</b>Mới</span>
+    <span class="s-warm"><b>${wa}</b>Học</span>
+    <span class="s-hot"><b>${h}</b>Sắp thuộc</span>
+    ${ln ? `<span class="s-learned"><b>${ln}</b>Đã thuộc</span>` : ""}
+    ${d ? `<span><b>${d}</b>Tắt</span>` : ""}
+  `;
+}
+
+// ---------- Backup nhắc ----------
+function renderBackupBanner() {
+  const banner = $("backupBanner");
+  if (words.length < 1) { banner.style.display = "none"; return; }
+
+  // Ưu tiên cảnh báo an toàn: có dữ liệu nhưng CHƯA kết nối Google Drive →
+  // dữ liệu chỉ ở máy này, gỡ extension là mất. Nhắc kết nối Drive hoặc backup.
+  chrome.runtime.sendMessage({ type: "SYNC_STATUS" }, (s) => {
+    if (chrome.runtime.lastError) s = null;
+    const driveSafe = s && s.driveConnected;
+    banner.classList.remove("danger", "safe");
+
+    if (!driveSafe) {
+      banner.style.display = "flex";
+      banner.classList.add("danger");
+      banner.innerHTML = `
+        <span>🔒 Dữ liệu đang chỉ lưu trên máy này — gỡ extension sẽ mất. Hãy kết nối Drive hoặc tải backup.</span>
+        <span class="banner-acts">
+          <button id="connectDriveQuick">☁ Kết nối Drive</button>
+          <button id="backupNow" class="ghost">⬇ Backup</button>
+        </span>
+      `;
+      $("connectDriveQuick").onclick = () => chrome.runtime.openOptionsPage();
+      $("backupNow").onclick = () => $("exportBtn").click();
+      return;
+    }
+
+    // Đã có Drive → hiện dòng "an toàn" màu xanh gọn nhẹ.
+    banner.classList.remove("danger");
+    banner.classList.add("safe");
+    banner.style.display = "flex";
+    banner.innerHTML = `<span>🟢 An toàn — dữ liệu đã được lưu lên Google Drive của bạn.</span>`;
+  });
+}
+
+// ---------- Render list ----------
+function render() {
+  renderStats();
+  const keyword = $("searchInput").value.trim().toLowerCase();
+  const sortBy = $("sortSel").value;
+  const filterBy = $("filterSel").value;
+
+  let filtered = words;
+  if (keyword) {
+    filtered = filtered.filter(w =>
+      w.term.toLowerCase().includes(keyword) ||
+      (w.meaning || "").toLowerCase().includes(keyword));
+  }
+  if (filterBy === "disabled") filtered = filtered.filter(w => w.disabled && !w.learned);
+  else if (filterBy === "learned") filtered = filtered.filter(w => w.learned);
+  else if (filterBy === "all") filtered = filtered.filter(w => !w.learned);
+  else filtered = filtered.filter(w => !w.disabled && !w.learned && levelOf(w) === filterBy);
+
+  const sorters = {
+    newest: (a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""),
+    oldest: (a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""),
+    alpha: (a, b) => a.term.toLowerCase().localeCompare(b.term.toLowerCase()),
+    hoverDesc: (a, b) => (b.hoverCount || 0) - (a.hoverCount || 0),
+    hoverAsc: (a, b) => (a.hoverCount || 0) - (b.hoverCount || 0),
+    closest: (a, b) => ((b.hoverCount || 0) / (b.autoDeleteAt || 20)) - ((a.hoverCount || 0) / (a.autoDeleteAt || 20))
+  };
+  const sorted = [...filtered].sort(sorters[sortBy] || sorters.newest);
+
+  $("count").textContent = words.length;
+  const list = $("list");
+  list.innerHTML = "";
+
+  if (settings.enabled === false) {
+    const b = document.createElement("div");
+    b.className = "disabled-banner";
+    b.textContent = "⏸ Extension đang TẮT — không highlight trang web";
+    list.appendChild(b);
+  }
+
+  if (sorted.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.innerHTML = words.length === 0
+      ? "Chưa có mục nào.<br>Bôi đen chữ trên web → chuột phải → 'Tô sáng & lưu'<br>hoặc Ctrl+Shift+V"
+      : "Không tìm thấy.";
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const w of sorted) {
+    const pct = Math.min(100, Math.round((w.hoverCount / w.autoDeleteAt) * 100));
+    const lv = levelOf(w);
+    const lang = w.lang || "en";
+    // Chỉ hiện phiên âm + nút nghe cho mục dịch thuật (có IPA, hoặc tiếng Nhật) — note thường giữ gọn
+    const isTranslation = !!w.phonetic || lang === "ja";
+    const item = document.createElement("div");
+    item.className = "item" + (w.disabled ? " disabled" : "") + (w.learned ? " learned" : "") + " lv-" + lv;
+    const statusBadge = w.learned ? " · 🎓 ĐÃ THUỘC" : (w.disabled ? " · ĐÃ TẮT" : "");
+    const countBadge = (!w.learned && !w.disabled) ? ` · <span class="hint-count" title="Số lần đã gặp / ngưỡng">${w.hoverCount || 0}/${w.autoDeleteAt || 20}</span>` : "";
+    item.innerHTML = `
+      <div class="info">
+        <div class="term">
+          <span class="term-text">${escapeHtml(w.term)}</span>
+          <span class="lang-tag lang-${lang}">${lang.toUpperCase()}</span>
+          ${isTranslation ? `<button class="spk" data-id="${w.id}" title="Nghe phát âm">${ICON.speak}</button>` : ""}
+        </div>
+        ${w.phonetic ? `<div class="phon">${escapeHtml(w.phonetic)}</div>` : ""}
+        ${w.meaning ? `<div class="meaning">${escapeHtml(w.meaning)}</div>` : ""}
+        ${w.note ? `<div class="note">${escapeHtml(w.note)}</div>` : ""}
+        <div class="meta">${formatDate(w.createdAt)}${statusBadge}${countBadge}</div>
+        <div class="progress"><div style="width:${pct}%"></div></div>
+      </div>
+      <div class="actions">
+        ${w.learned
+          ? `<button class="ic-btn unlearn" data-id="${w.id}" title="Bỏ đánh dấu đã thuộc">${ICON.unlearn}</button>`
+          : `<button class="ic-btn learn" data-id="${w.id}" title="Đánh dấu đã thuộc">${ICON.learn}</button>`}
+        <button class="ic-btn toggle-word" data-id="${w.id}" title="${w.disabled ? "Bật lại highlight" : "Tắt highlight"}">${w.disabled ? ICON.bellOff : ICON.bell}</button>
+        <button class="ic-btn edit" data-id="${w.id}" title="Sửa">${ICON.edit}</button>
+        <button class="ic-btn del" data-id="${w.id}" title="Xoá">${ICON.del}</button>
+      </div>
+    `;
+    list.appendChild(item);
+  }
+
+  list.querySelectorAll(".learn").forEach(b => {
+    b.onclick = () => {
+      const w = words.find(x => x.id === b.dataset.id);
+      w.learned = true;
+      w.learnedAt = new Date().toISOString();
+      save(); render();
+      toast(`🎓 Đã đánh dấu "${w.term}" là đã thuộc`, "success");
+    };
+  });
+  list.querySelectorAll(".unlearn").forEach(b => {
+    b.onclick = () => {
+      const w = words.find(x => x.id === b.dataset.id);
+      w.learned = false;
+      delete w.learnedAt;
+      save(); render();
+      toast(`Đã bỏ đánh dấu "${w.term}"`, "success");
+    };
+  });
+
+  list.querySelectorAll(".spk").forEach(b => {
+    b.onclick = (e) => {
+      e.stopPropagation();
+      const w = words.find(x => x.id === b.dataset.id);
+      if (w) speakTerm(w.term, (w.lang || "en") === "ja" ? "ja-JP" : "en-US");
+    };
+  });
+
+  list.querySelectorAll(".toggle-word").forEach(b => {
+    b.onclick = () => {
+      const w = words.find(x => x.id === b.dataset.id);
+      w.disabled = !w.disabled;
+      save(); render();
+    };
+  });
+  list.querySelectorAll(".del").forEach(b => {
+    b.onclick = async () => {
+      const w = words.find(x => x.id === b.dataset.id);
+      const ok = await dlgConfirm("Xoá từ", `Xoá "${w.term}"?`, { okText: "Xoá" });
+      if (!ok) return;
+      const removed = { ...w };
+      words = words.filter(x => x.id !== b.dataset.id);
+      save(); render();
+      toast(`Đã xoá "${removed.term}" — bấm để hoàn tác`, "undo", () => {
+        if (words.some(x => x.id === removed.id)) return;
+        words.push(removed);
+        save(); render();
+        toast(`Đã khôi phục "${removed.term}"`, "success");
+      });
+    };
+  });
+  list.querySelectorAll(".edit").forEach(b => {
+    b.onclick = () => {
+      startInlineEdit(b.closest(".item"), b.dataset.id);
+    };
+  });
+}
+
+// ---------- Inline edit (thay prompt) ----------
+function startInlineEdit(itemEl, id) {
+  const w = words.find(x => x.id === id);
+  if (!w || !itemEl) return;
+  const info = itemEl.querySelector(".info");
+  info.innerHTML = `
+    <input type="text" class="term-input" value="${escapeHtml(w.term)}" placeholder="Từ" />
+    <input type="text" class="meaning-input" value="${escapeHtml(w.meaning || "")}" placeholder="Nghĩa" />
+    <input type="text" class="note-input" value="${escapeHtml(w.note || "")}" placeholder="Ghi chú" />
+  `;
+  itemEl.classList.add("editing");
+  itemEl.querySelector(".actions").innerHTML = `
+    <button class="ic-btn save-edit" title="Lưu">${ICON.save}</button>
+    <button class="ic-btn cancel-edit" title="Huỷ">${ICON.cancel}</button>
+  `;
+  const termInput = info.querySelector(".term-input");
+  const meaningInput = info.querySelector(".meaning-input");
+  const noteInput = info.querySelector(".note-input");
+  meaningInput.focus();
+  meaningInput.select();
+
+  const doSave = () => {
+    const newTerm = termInput.value.trim();
+    if (!newTerm) { toast("Từ không được trống", "error"); return; }
+    // Trùng với từ khác?
+    if (words.some(x => x.id !== id && x.term.toLowerCase() === newTerm.toLowerCase())) {
+      toast(`"${newTerm}" đã có trong danh sách`, "error");
+      return;
+    }
+    w.term = newTerm;
+    w.meaning = meaningInput.value.trim();
+    w.note = noteInput.value.trim();
+    save(); render();
+    toast("Đã lưu", "success");
+    autoCloseIfWindow();
+  };
+
+  itemEl.querySelector(".save-edit").onclick = doSave;
+  itemEl.querySelector(".cancel-edit").onclick = render;
+  [termInput, meaningInput, noteInput].forEach(inp => {
+    inp.addEventListener("keydown", imeSafe(e => {
+      if (e.key === "Enter") doSave();
+      else if (e.key === "Escape") render();
+    }));
+  });
+}
+
+// ---------- Thêm thủ công ----------
+$("addBtn").onclick = () => {
+  const term = $("termInput").value.trim();
+  if (!term) { $("termInput").focus(); return; }
+  if (words.some(w => w.term.toLowerCase() === term.toLowerCase())) {
+    toast(`"${term}" đã có trong danh sách`, "warn");
+    return;
+  }
+  words.push({
+    id: newId(),
+    term,
+    lang: detectLang(term),
+    meaning: $("meaningInput").value.trim(),
+    note: $("noteInput").value.trim(),
+    hoverCount: 0,
+    autoDeleteAt: settings.defaultThreshold || 20,
+    createdAt: new Date().toISOString()
+  });
+  save();
+  $("termInput").value = "";
+  $("meaningInput").value = "";
+  $("noteInput").value = "";
+  growTerm();
+  render();
+  if (isWindowMode) {
+    autoCloseIfWindow();
+  } else {
+    $("termInput").focus();
+  }
+};
+
+// Term là textarea (hỗ trợ đoạn dài) → tự giãn chiều cao; Ctrl/Cmd+Enter để lưu nhanh
+function growTerm() {
+  const ta = $("termInput");
+  ta.style.height = "auto";
+  ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+}
+$("termInput").addEventListener("input", growTerm);
+$("termInput").addEventListener("keydown", imeSafe(e => {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("addBtn").click(); }
+}));
+$("meaningInput").addEventListener("keydown", imeSafe(e => { if (e.key === "Enter") $("noteInput").focus(); }));
+$("noteInput").addEventListener("keydown", imeSafe(e => { if (e.key === "Enter") $("addBtn").click(); }));
+$("searchInput").addEventListener("input", debounce(render, 150));
+$("sortSel").addEventListener("change", render);
+$("filterSel").addEventListener("change", render);
+
+// ---------- Bulk add ----------
+$("bulkBtn").onclick = () => { $("bulkModal").style.display = "flex"; $("bulkText").focus(); };
+$("bulkCancel").onclick = () => $("bulkModal").style.display = "none";
+$("bulkSave").onclick = () => {
+  const lines = $("bulkText").value.split("\n").map(l => l.trim()).filter(Boolean);
+  let added = 0, dup = 0;
+  for (const line of lines) {
+    // Tách theo " - " hoặc tab hoặc " : "
+    const parts = line.split(/\s+-\s+|\t+|\s+:\s+/);
+    const term = (parts[0] || "").trim();
+    if (!term) continue;
+    if (words.some(w => w.term.toLowerCase() === term.toLowerCase())) { dup++; continue; }
+    words.push({
+      id: newId(),
+      term,
+      lang: detectLang(term),
+      meaning: (parts[1] || "").trim(),
+      note: (parts[2] || "").trim(),
+      hoverCount: 0,
+      autoDeleteAt: settings.defaultThreshold || 20,
+      createdAt: new Date().toISOString()
+    });
+    added++;
+  }
+  save();
+  $("bulkText").value = "";
+  $("bulkModal").style.display = "none";
+  toast(`Đã thêm ${added} từ${dup ? `, bỏ qua ${dup} trùng` : ""}`, "success");
+  render();
+};
+
+// ---------- Quiz mode ----------
+let quizQueue = [];
+let quizIdx = 0;
+let quizMode = "en2vi"; // hiển thị English, đoán nghĩa
+
+$("quizBtn").onclick = () => {
+  const candidates = words.filter(w => !w.disabled && !w.learned && w.meaning);
+  if (candidates.length < 3) {
+    toast("Cần ít nhất 3 mục có nghĩa để ôn tập", "warn");
+    return;
+  }
+  // Ưu tiên từ mới + warm, giới hạn 10 từ
+  quizQueue = candidates
+    .sort((a, b) => ((a.hoverCount || 0) / (a.autoDeleteAt || 20)) - ((b.hoverCount || 0) / (b.autoDeleteAt || 20)))
+    .slice(0, 10)
+    .sort(() => Math.random() - 0.5);
+  quizIdx = 0;
+  $("quizModal").style.display = "flex";
+  showQuizCard();
+};
+
+function showQuizCard() {
+  const card = $("quizCard");
+  const actions = $("quizActions");
+  const prog = $("quizProgress");
+  if (quizIdx >= quizQueue.length) {
+    prog.textContent = "";
+    card.innerHTML = `<div class="q-meaning">🎉 Hết câu hỏi!</div>`;
+    actions.innerHTML = `<button class="btn-primary" id="quizClose">Đóng</button>`;
+    $("quizClose").onclick = () => { $("quizModal").style.display = "none"; render(); };
+    return;
+  }
+  const w = quizQueue[quizIdx];
+  prog.textContent = `${quizIdx + 1} / ${quizQueue.length}`;
+  card.innerHTML = `
+    <div class="q-term">${escapeHtml(w.term)}</div>
+    <div class="q-meaning q-hidden">(bấm để xem nghĩa)</div>
+  `;
+  let revealed = false;
+  card.onclick = () => {
+    if (revealed) return;
+    revealed = true;
+    card.querySelector(".q-meaning").className = "q-meaning";
+    card.querySelector(".q-meaning").textContent = w.meaning;
+  };
+  actions.innerHTML = `
+    <button class="btn-bad" id="qBad">Chưa thuộc</button>
+    <button class="btn-skip" id="qSkip">Bỏ qua</button>
+    <button class="btn-good" id="qGood">Đã thuộc (+5)</button>
+  `;
+  $("qBad").onclick = () => { quizIdx++; showQuizCard(); };
+  $("qSkip").onclick = () => { quizIdx++; showQuizCard(); };
+  $("qGood").onclick = () => {
+    w.hoverCount = (w.hoverCount || 0) + 5;
+    save();
+    quizIdx++;
+    showQuizCard();
+  };
+}
+
+// ---------- Export / Import ----------
+$("exportBtn").onclick = () => {
+  const data = { version: 1, exportedAt: new Date().toISOString(), words, settings };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Highlight Note - Tu vung (${new Date().toISOString().slice(0, 10)}).json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  settings.lastExportAt = new Date().toISOString();
+  saveSettings();
+  renderBackupBanner();
+};
+
+// Import qua trang Cài đặt: popup hay tự đóng khi mở hộp thoại chọn file (đặc biệt trên Linux).
+$("importBtn").onclick = () => chrome.runtime.openOptionsPage();
+$("importFile").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data.words)) throw new Error("File không hợp lệ");
+      const mode = await dlgChoice(
+        "Import từ vựng",
+        `Tìm thấy ${data.words.length} từ trong file.`,
+        [
+          { label: "Huỷ", value: null, kind: "btn-cancel" },
+          { label: "Thay thế", value: "replace", kind: "btn-bad" },
+          { label: "Gộp (giữ counter max)", value: "merge", kind: "btn-primary" }
+        ]
+      );
+      if (!mode) { e.target.value = ""; return; }
+      if (mode === "merge") {
+        const byTerm = new Map(words.map(w => [w.term.toLowerCase(), w]));
+        for (const w of data.words) {
+          const k = w.term.toLowerCase();
+          if (byTerm.has(k)) {
+            const ex = byTerm.get(k);
+            ex.hoverCount = Math.max(ex.hoverCount || 0, w.hoverCount || 0);
+            if (!ex.meaning && w.meaning) ex.meaning = w.meaning;
+            if (!ex.note && w.note) ex.note = w.note;
+          } else {
+            words.push({
+              id: w.id || newId(),
+              term: w.term,
+              lang: w.lang || detectLang(w.term),
+              phonetic: w.phonetic || "",
+              meaning: w.meaning || "",
+              note: w.note || "",
+              hoverCount: w.hoverCount || 0,
+              autoDeleteAt: w.autoDeleteAt || (settings.defaultThreshold || 20),
+              learned: !!w.learned,
+              learnedAt: w.learnedAt || undefined,
+              createdAt: w.createdAt || new Date().toISOString()
+            });
+          }
+        }
+      } else {
+        words = data.words.map(w => ({
+          id: w.id || newId(),
+          term: w.term,
+          lang: w.lang || detectLang(w.term),
+          phonetic: w.phonetic || "",
+          meaning: w.meaning || "",
+          note: w.note || "",
+          hoverCount: w.hoverCount || 0,
+          autoDeleteAt: w.autoDeleteAt || 20,
+          learned: !!w.learned,
+          learnedAt: w.learnedAt || undefined,
+          createdAt: w.createdAt || new Date().toISOString()
+        }));
+      }
+      if (data.settings) settings = { ...settings, ...data.settings };
+      chrome.storage.local.set({ words, settings }, () => {
+        render();
+        toast(`Import xong — ${words.length} từ`, "success");
+      });
+    } catch (err) {
+      toast("Lỗi đọc file: " + err.message, "error");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+};
+
+$("optionsBtn").onclick = () => chrome.runtime.openOptionsPage();
+if ($("syncDot")) $("syncDot").onclick = () => chrome.runtime.openOptionsPage();
+
+if (isWindowMode) {
+  $("windowBtn").style.display = "none";
+} else {
+  $("windowBtn").onclick = () => {
+    chrome.runtime.sendMessage({ type: "OPEN_POPUP_WINDOW" });
+    window.close();
+  };
+}
+
+// Tìm tab đang xem ở cửa sổ trình duyệt (KHÔNG phải cửa sổ popup của extension)
+async function getBrowsingTab() {
+  const wins = await chrome.windows.getAll({ windowTypes: ["normal"], populate: true });
+  wins.sort((a, b) => (b.focused ? 1 : 0) - (a.focused ? 1 : 0) || b.id - a.id);
+  for (const w of wins) {
+    const tab = w.tabs && w.tabs.find(t => t.active);
+    if (tab) return tab;
+  }
+  return null;
+}
+
+$("rescanBtn").onclick = async () => {
+  const tab = await getBrowsingTab();
+  if (!tab) return;
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: "FORCE_RESCAN" });
+    $("rescanBtn").classList.add("ok");
+    setTimeout(() => $("rescanBtn").classList.remove("ok"), 1500);
+  } catch (e) {
+    toast("Trang này không nhận được lệnh (chrome:// hoặc chưa load)", "error");
+  }
+};
+
+async function renderSiteBar() {
+  const bar = $("siteBar");
+  const tab = await getBrowsingTab();
+  if (!tab || !tab.url) { bar.style.display = "none"; return; }
+  let host;
+  try { host = new URL(tab.url).hostname; } catch { bar.style.display = "none"; return; }
+  if (!host) { bar.style.display = "none"; return; }
+  const list = settings.blacklistedHosts || [];
+  const isBlocked = list.includes(host);
+  bar.className = "site-bar" + (isBlocked ? " bl" : "");
+  bar.innerHTML = `
+    <span class="host" title="${host}">${isBlocked ? "🚫 " : "🌐 "}${host}</span>
+    <button id="blBtn">${isBlocked ? "Bật lại" : "Tắt site này"}</button>
+  `;
+  $("blBtn").onclick = () => {
+    let newList = list.slice();
+    if (isBlocked) newList = newList.filter(h => h !== host);
+    else newList.push(host);
+    settings.blacklistedHosts = newList;
+    saveSettings();
+    renderSiteBar();
+  };
+}
+
+// Sau khi bulk save trong window mode → tự đóng
+if (isWindowMode) {
+  const origBulkSave = $("bulkSave").onclick;
+  $("bulkSave").onclick = function (...args) {
+    if (origBulkSave) origBulkSave.apply(this, args);
+    autoCloseIfWindow();
+  };
+}
+
+// Tô đậm window mode để user biết đang ở cửa sổ riêng
+if (isWindowMode) {
+  document.body.classList.add("window-mode");
+}
+
+load();
+renderSiteBar();
+
+// Giữ popup đồng bộ với storage: khi dữ liệu đổi từ nơi khác (đồng bộ kéo về,
+// content script sửa/xoá…), cập nhật biến trong popup để lần "save" sau KHÔNG
+// ghi đè bản cũ. Bỏ qua khi đang sửa inline để không mất chữ đang gõ.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return;
+  if (changes.settings && changes.settings.newValue) settings = changes.settings.newValue;
+  if (changes.words && changes.words.newValue) {
+    words = changes.words.newValue;
+    if (!document.querySelector(".editing")) {
+      render();
+      renderStats && renderStats();
+    }
+  }
+});
+
+// Auto-focus / auto-open theo focus param
+if (isWindowMode && focusTarget) {
+  setTimeout(() => {
+    if (focusTarget === "bulkBtn") $("bulkBtn").click();
+    else if (focusTarget.startsWith("edit:")) {
+      const id = focusTarget.slice(5);
+      const btn = document.querySelector(`.edit[data-id="${id}"]`);
+      if (btn) btn.click();
+    } else {
+      const el = $(focusTarget);
+      if (el) el.focus();
+    }
+  }, 150);
+}

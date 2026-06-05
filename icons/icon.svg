@@ -1,0 +1,44 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6366F1"/>
+      <stop offset="1" stop-color="#4338CA"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="26" y1="64" x2="102" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFD43B"/>
+      <stop offset="1" stop-color="#FBBF24"/>
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.4" flood-color="#1E1B4B" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- app tile -->
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="url(#bg)"/>
+
+  <!-- highlighted text block (the "note") -->
+  <g filter="url(#softShadow)">
+    <!-- amber highlight swipe behind the highlighted word -->
+    <rect x="24" y="48" width="66" height="20" rx="10" fill="url(#amber)"/>
+    <!-- the highlighted word -->
+    <rect x="32" y="55" width="50" height="7" rx="3.5" fill="#3730A3"/>
+    <!-- two plain note lines below -->
+    <rect x="24" y="78" width="54" height="7" rx="3.5" fill="#FFFFFF" fill-opacity="0.95"/>
+    <rect x="24" y="93" width="38" height="7" rx="3.5" fill="#FFFFFF" fill-opacity="0.7"/>
+  </g>
+
+  <!-- highlighter pen, chisel tip resting on the swipe -->
+  <g filter="url(#softShadow)" transform="rotate(38 86 44)">
+    <!-- chisel tip -->
+    <path d="M80 56 l12 0 l-2 9 a4 4 0 0 1 -8 0 z" fill="#FFE08A"/>
+    <!-- collar -->
+    <rect x="79" y="50" width="14" height="7" rx="2" fill="#E0E7FF"/>
+    <!-- barrel -->
+    <rect x="78" y="18" width="16" height="33" rx="5" fill="#FFFFFF"/>
+    <rect x="78" y="18" width="16" height="33" rx="5" fill="#C7D2FE" fill-opacity="0.0"/>
+    <!-- barrel accent stripe -->
+    <rect x="78" y="30" width="16" height="6" fill="#FBBF24"/>
+    <!-- cap top -->
+    <rect x="80" y="12" width="12" height="8" rx="3" fill="#4F46E5"/>
+  </g>
+</svg>

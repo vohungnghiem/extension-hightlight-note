@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chào mừng bạn đến với Highlight Note</title>
+<style>
+  :root {
+    --brand: #5b56e0;
+    --brand-strong: #4338ca;
+    --brand-weak: #eef0ff;
+    --accent: #fbbf24;
+    --ink: #1f2230;
+    --ink-soft: #555a6b;
+    --ink-faint: #8b90a0;
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --line: #e8eaf1;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(20, 22, 40, 0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: linear-gradient(160deg, #eef0ff 0%, #f6f7fb 40%);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    line-height: 1.55;
+  }
+  .wrap { width: 100%; max-width: 720px; }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .hero img { width: 84px; height: 84px; border-radius: 20px; box-shadow: var(--shadow); }
+  .hero h1 { font-size: 28px; margin-top: 18px; color: var(--brand-strong); }
+  .hero p { color: var(--ink-soft); font-size: 16px; margin-top: 8px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .card h2 {
+    font-size: 19px;
+    color: var(--brand-strong);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card h2 .pin { font-size: 22px; }
+  .lead { color: var(--ink-soft); margin-bottom: 22px; font-size: 15px; }
+
+  .steps { list-style: none; counter-reset: step; }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-top: 1px dashed var(--line);
+    align-items: flex-start;
+  }
+  .steps li:first-child { border-top: none; }
+  .steps .num {
+    flex: 0 0 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--brand);
+    color: #fff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+  .steps .num::before { content: counter(step); }
+  .steps .body { flex: 1; }
+  .steps .body strong { display: block; font-size: 15.5px; margin-bottom: 2px; }
+  .steps .body span { color: var(--ink-soft); font-size: 14.5px; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--brand-weak);
+    color: var(--brand-strong);
+    border-radius: 8px;
+    padding: 2px 9px;
+    font-weight: 600;
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+
+  .mock {
+    margin-top: 22px;
+    background: #f1f2f8;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+  .mock .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 8px 12px;
+    box-shadow: var(--shadow);
+  }
+  .mock .puzzle { font-size: 22px; }
+  .mock .ouricon { width: 26px; height: 26px; border-radius: 7px; }
+  .mock .pin-emoji {
+    font-size: 20px;
+    filter: grayscale(0);
+  }
+  .mock .caption { font-size: 13px; color: var(--ink-faint); text-align: right; }
+  .arrow { font-size: 22px; color: var(--brand); }
+
+  .tips { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 560px) { .tips { grid-template-columns: 1fr; } }
+  .tip {
+    background: var(--brand-weak);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .tip b { color: var(--brand-strong); font-size: 14.5px; }
+  .tip p { color: var(--ink-soft); font-size: 14px; margin-top: 4px; }
+
+  .cta {
+    text-align: center;
+    margin-top: 8px;
+  }
+  .btn {
+    display: inline-block;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 13px 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 6px 16px rgba(91, 86, 224, 0.35);
+  }
+  .btn:hover { background: var(--brand-strong); }
+  .footnote { color: var(--ink-faint); font-size: 13px; margin-top: 14px; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <img src="icons/icon128.png" alt="Highlight Note" />
+      <h1>Chào mừng bạn đến với Highlight Note! 🎉</h1>
+      <p>Tô sáng từ, ghi chú và dịch trên mọi trang web — chỉ trong vài giây.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="pin">📌</span> Bước quan trọng: Ghim biểu tượng để dễ dùng</h2>
+      <p class="lead">Để mở Highlight Note nhanh bất cứ lúc nào, hãy <b>ghim (pin)</b> biểu tượng lên thanh công cụ. Chỉ làm 1 lần thôi, mất 5 giây:</p>
+
+      <ol class="steps">
+        <li>
+          <div class="num"></div>
+          <div class="body">
+            <strong>Bấm vào hình mảnh ghép <span class="chip">🧩</span> ở góc trên bên phải</strong>
+            <span>Hình mảnh ghép nằm cạnh ảnh đại diện tài khoản của bạn trên trình duyệt.</span>
+          </div>
+        </li>
+        <li>
+          <div class="num"></div>
+          <div class="body">
+            <strong>Tìm dòng “Highlight Note” trong danh sách</strong>
+            <span>Đó là tên của tiện ích này.</span>
+          </div>
+        </li>
+        <li>
+          <div class="num"></div>
+          <div class="body">
+            <strong>Bấm vào biểu tượng cái ghim <span class="chip">📌</span> bên cạnh</strong>
+            <span>Khi cái ghim chuyển sang màu xanh, biểu tượng sẽ hiện cố định trên thanh công cụ. Xong!</span>
+          </div>
+        </li>
+      </ol>
+
+      <div class="mock">
+        <div class="caption">Trông sẽ giống thế này<br/>ở góc trên bên phải →</div>
+        <span class="arrow">➜</span>
+        <div class="toolbar">
+          <span class="puzzle">🧩</span>
+          <img class="ouricon" src="icons/icon48.png" alt="icon" />
+          <span class="pin-emoji">📌</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cách dùng nhanh</h2>
+      <div class="tips">
+        <div class="tip">
+          <b>✍️ Bôi đen để lưu</b>
+          <p>Bôi đen một từ/cụm từ trên web, rồi chuột phải → “Tô sáng &amp; lưu”, hoặc nhấn <b>Ctrl+Shift+V</b>.</p>
+        </div>
+        <div class="tip">
+          <b>👀 Di chuột để xem nghĩa</b>
+          <p>Đưa chuột lên từ đã tô sáng để hiện ghi chú &amp; nghĩa. Click vào để ghim lại.</p>
+        </div>
+        <div class="tip">
+          <b>📖 Mở danh sách từ</b>
+          <p>Bấm biểu tượng vừa ghim (hoặc <b>Ctrl+Shift+Y</b>) để xem &amp; ôn lại các từ đã lưu.</p>
+        </div>
+        <div class="tip">
+          <b>🔒 Riêng tư</b>
+          <p>Dữ liệu lưu ngay trên máy bạn, không theo dõi. Có thể bật đồng bộ qua tài khoản Google.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <h2 style="justify-content:center">🛡️ Bảo vệ dữ liệu của bạn</h2>
+      <p class="lead" style="margin-bottom:16px">Từ vựng chỉ lưu trên máy này sẽ <b>mất khi gỡ extension</b>. Kết nối Google Drive để dữ liệu luôn an toàn — gỡ hay đổi máy vẫn còn.</p>
+      <button class="btn" id="protectBtn">☁ Kết nối Google Drive (khuyên dùng)</button>
+      <p class="footnote" id="protectMsg" style="min-height:18px"></p>
+    </div>
+
+    <div class="cta">
+      <button class="btn" id="closeBtn">Tôi đã hiểu, bắt đầu dùng!</button>
+      <p class="footnote">Bạn có thể mở lại hướng dẫn này bất cứ lúc nào trong phần Cài đặt.</p>
+    </div>
+  </div>
+
+  <script src="welcome.js"></script>
+</body>
+</html>
