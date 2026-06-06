@@ -99,6 +99,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       try {
         await disconnectDrive();
+        updateBadge();
         sendResponse({ ok: true, status: await getSyncStatus() });
       } catch (e) {
         sendResponse({ ok: false, error: e.message });
@@ -127,6 +128,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           if (remote) await applyRemoteIfNewer(remote, remote.syncRev || 0);
         } catch (e) { /* chưa có file trên Drive cũng không sao */ }
         await pushNow(true);
+        updateBadge();
         if (needsDriveAuth || lastPushError) {
           sendResponse({ ok: false, error: lastPushError || "Đẩy lên Drive thất bại", status: await getSyncStatus() });
         } else {
@@ -333,8 +335,69 @@ async function getSyncStatus() {
     driveConnected: drive.connected,
     driveEmail: drive.email,
     needsDriveAuth,
-    lastPushError
+    lastPushError,
+    safety: await computeSafety()
   };
+}
+
+// ======================= MỨC AN TOÀN DỮ LIỆU =======================
+// Trả về mức an toàn để (1) popup hiện banner phù hợp, (2) gắn badge lên icon
+// tiện ích → người dùng biết nguy cơ mất dữ liệu mà KHÔNG cần mở popup.
+//   safe    : đã ở cloud (Drive) hoặc Tài khoản Chrome → còn nguyên khi gỡ/cài lại.
+//   caution : không sync cloud, nhưng có file backup trên đĩa còn mới (sống sót khi gỡ).
+//   danger  : chỉ nằm trong storage.local máy này → gỡ extension là mất.
+//   empty   : chưa có dữ liệu → không cần cảnh báo.
+async function computeSafety() {
+  try {
+    const { words, settings } = await HNSync.getLocal();
+    if (!words || words.length === 0) return { level: "empty" };
+
+    const drive = await getDriveConnection();
+    if (drive.connected) return { level: "safe", via: "drive" };
+
+    const meta = await HNSync.getRemoteMeta();
+    const syncEnabled = settings.syncEnabled !== false;
+    // Có meta trên storage.sync nghĩa là dữ liệu đã nằm ở Tài khoản Chrome
+    // (hoặc con trỏ Drive) → đăng nhập Chrome ở máy khác sẽ kéo về được.
+    if (syncEnabled && meta && !needsDriveAuth) {
+      return { level: "safe", via: meta.mode === "drive" ? "drive" : "account" };
+    }
+
+    // Không sync cloud → xét file backup trên đĩa (auto-backup hoặc export tay).
+    const lastAuto = await getLastAutoBackup();
+    const lastAutoMs = lastAuto ? Date.parse(lastAuto) : 0;
+    const lastExportMs = settings.lastExportAt ? Date.parse(settings.lastExportAt) : 0;
+    const lastBackupMs = Math.max(lastAutoMs || 0, lastExportMs || 0);
+    const fresh = lastBackupMs && (Date.now() - lastBackupMs < AUTO_BACKUP_INTERVAL_MS);
+    if (fresh) return { level: "caution", via: "backup", lastBackupMs };
+
+    return { level: "danger", lastBackupMs: lastBackupMs || 0 };
+  } catch (e) {
+    return { level: "unknown" };
+  }
+}
+
+// Gắn/xoá badge cảnh báo trên icon tiện ích theo mức an toàn.
+let badgeUpdating = false;
+async function updateBadge() {
+  if (badgeUpdating) return;
+  badgeUpdating = true;
+  try {
+    const s = await computeSafety();
+    if (s.level === "danger") {
+      chrome.action.setBadgeText({ text: "!" });
+      chrome.action.setBadgeBackgroundColor({ color: "#e53935" });
+      if (chrome.action.setBadgeTextColor) chrome.action.setBadgeTextColor({ color: "#ffffff" });
+      chrome.action.setTitle({
+        title: "Highlight Note — ⚠ Dữ liệu CHƯA được sao lưu, có thể mất khi gỡ tiện ích.\nBấm để bật đồng bộ hoặc tải backup."
+      });
+    } else {
+      chrome.action.setBadgeText({ text: "" });
+      chrome.action.setTitle({ title: "Highlight Note" });
+    }
+  } catch (e) {} finally {
+    badgeUpdating = false;
+  }
 }
 
 // ======================= TỰ ĐỘNG BACKUP RA MÁY =======================
@@ -389,6 +452,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.words || changes.settings) {
     bumpLocalRev().then(() => schedulePush()).catch(() => schedulePush());
   }
+  // Dữ liệu / cài đặt / mốc backup đổi → tính lại badge cảnh báo trên icon.
+  if (changes.words || changes.settings || changes.__lastAutoBackupAt) {
+    updateBadge();
+  }
 });
 
 // remote đổi (máy khác ghi) → kéo về.
@@ -401,16 +468,18 @@ chrome.storage.onChanged.addListener((changes, area) => {
 chrome.runtime.onStartup.addListener(() => {
   pullRemote().catch(() => {});
   maybeAutoBackup(false).catch(() => {});
+  updateBadge();
 });
 chrome.runtime.onInstalled.addListener(() => {
   pullRemote().catch(() => {});
   chrome.alarms.create("hn-sync-pull", { periodInMinutes: 15 });
   // Kiểm tra backup mỗi ngày 1 lần; bản thân hàm tự quyết đã quá 7 ngày chưa.
   chrome.alarms.create("hn-auto-backup", { periodInMinutes: 1440 });
+  updateBadge();
 });
 chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === "hn-sync-pull") pullRemote().catch(() => {});
-  if (a.name === "hn-auto-backup") maybeAutoBackup(false).catch(() => {});
+  if (a.name === "hn-auto-backup") maybeAutoBackup(false).catch(() => {}).finally(() => updateBadge());
 });
 
 // Cho phép options bấm "Sao lưu ngay vào máy".
@@ -418,5 +487,27 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg && msg.type === "AUTO_BACKUP_NOW") {
     maybeAutoBackup(true).then(() => sendResponse({ ok: true })).catch((e) => sendResponse({ ok: false, error: e.message }));
     return true;
+  }
+  // Mở trang Cài đặt / Hướng dẫn từ UI nổi trong content script (content script
+  // không gọi trực tiếp được openOptionsPage / chrome.tabs).
+  if (msg && msg.type === "OPEN_OPTIONS") {
+    chrome.runtime.openOptionsPage();
+    return;
+  }
+  if (msg && msg.type === "OPEN_WELCOME") {
+    chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
+    return;
+  }
+  // Content script hỏi: icon đã ghim lên thanh công cụ chưa? (để ẩn nút Hướng dẫn
+  // trong trang khi đã ghim). getUserSettings có từ Chrome 91.
+  if (msg && msg.type === "GET_ACTION_PINNED") {
+    if (chrome.action && chrome.action.getUserSettings) {
+      chrome.action.getUserSettings()
+        .then((s) => sendResponse({ pinned: !!s.isOnToolbar }))
+        .catch(() => sendResponse({ pinned: false }));
+      return true; // async
+    }
+    sendResponse({ pinned: false });
+    return;
   }
 });

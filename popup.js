@@ -63,6 +63,7 @@ function load() {
     render();
     renderBackupBanner();
     refreshSyncDot();
+    renderSiteBar(); // sau khi settings đã load → bar hiện đúng trạng thái blacklist
   });
 }
 
@@ -74,18 +75,20 @@ function refreshSyncDot() {
     if (chrome.runtime.lastError || !s) { dot.style.display = "none"; return; }
     dot.style.display = "";
     dot.classList.remove("syncing", "ok", "drive", "warn", "off");
+    // Icon luôn là ⚙ (vào Cài đặt khi bấm); MÀU bánh răng phản ánh trạng thái đồng bộ.
+    dot.textContent = "⚙";
     if (!s.enabled) {
-      dot.classList.add("off"); dot.textContent = "⟳";
-      dot.title = "Đồng bộ đang tắt";
+      dot.classList.add("off");
+      dot.title = "Cài đặt · Đồng bộ đang TẮT";
     } else if (s.needsDriveAuth || s.lastPushError) {
-      dot.classList.add("warn"); dot.textContent = "⚠";
-      dot.title = s.lastPushError || "Cần kết nối Google Drive — mở Cài đặt";
+      dot.classList.add("warn");
+      dot.title = "Cài đặt · " + (s.lastPushError || "Cần kết nối Google Drive");
     } else if (s.mode === "drive") {
-      dot.classList.add("drive"); dot.textContent = "☁";
-      dot.title = "Đang đồng bộ qua Google Drive";
+      dot.classList.add("drive");
+      dot.title = "Cài đặt · Đang đồng bộ qua Google Drive";
     } else {
-      dot.classList.add("ok"); dot.textContent = "⟳";
-      dot.title = "Đã đồng bộ qua tài khoản (Storage Sync)";
+      dot.classList.add("ok");
+      dot.title = "Cài đặt · Đã đồng bộ qua Tài khoản Chrome";
     }
   });
 }
@@ -230,21 +233,35 @@ function renderBackupBanner() {
   const banner = $("backupBanner");
   if (words.length < 1) { banner.style.display = "none"; return; }
 
-  // Ưu tiên cảnh báo an toàn: có dữ liệu nhưng CHƯA kết nối Google Drive →
-  // dữ liệu chỉ ở máy này, gỡ extension là mất. Nhắc kết nối Drive hoặc backup.
+  // Banner "thông minh" theo mức an toàn do background tính (safe/caution/danger).
+  // Mục tiêu: phản ánh ĐÚNG rủi ro mất dữ liệu, không doạ nhầm khi đã có Tài khoản
+  // Chrome / backup. (Badge "!" trên icon tiện ích lo phần "biết mà không cần mở".)
   chrome.runtime.sendMessage({ type: "SYNC_STATUS" }, (s) => {
     if (chrome.runtime.lastError) s = null;
-    const driveSafe = s && s.driveConnected;
-    banner.classList.remove("danger", "safe");
+    const safety = (s && s.safety) || { level: s && s.driveConnected ? "safe" : "danger" };
+    banner.classList.remove("danger", "safe", "caution");
 
-    if (!driveSafe) {
+    const fmtDays = (ms) => {
+      if (!ms) return "";
+      const d = Math.floor((Date.now() - ms) / 86400000);
+      return d <= 0 ? "hôm nay" : d === 1 ? "hôm qua" : `${d} ngày trước`;
+    };
+
+    // An toàn (hoặc chưa có dữ liệu) → KHÔNG hiện banner. Tránh người dùng ỷ y vào
+    // dải xanh thường trực; trạng thái an toàn đã thể hiện qua màu icon ⚙ ở header.
+    if (safety.level === "safe" || safety.level === "empty") {
+      banner.style.display = "none";
+      return;
+    }
+
+    if (safety.level === "caution") {
+      banner.classList.add("caution");
       banner.style.display = "flex";
-      banner.classList.add("danger");
       banner.innerHTML = `
-        <span>🔒 Dữ liệu đang chỉ lưu trên máy này — gỡ extension sẽ mất. Hãy kết nối Drive hoặc tải backup.</span>
+        <span>🟡 Đã có bản backup trên máy (${fmtDays(safety.lastBackupMs)}), nhưng chưa bật đồng bộ đám mây. Bật Drive để an toàn nhất.</span>
         <span class="banner-acts">
           <button id="connectDriveQuick">☁ Kết nối Drive</button>
-          <button id="backupNow" class="ghost">⬇ Backup</button>
+          <button id="backupNow" class="ghost">⬇ Backup lại</button>
         </span>
       `;
       $("connectDriveQuick").onclick = () => chrome.runtime.openOptionsPage();
@@ -252,11 +269,18 @@ function renderBackupBanner() {
       return;
     }
 
-    // Đã có Drive → hiện dòng "an toàn" màu xanh gọn nhẹ.
-    banner.classList.remove("danger");
-    banner.classList.add("safe");
+    // danger (và unknown): chỉ ở storage.local máy này → nguy cơ mất khi gỡ.
+    banner.classList.add("danger");
     banner.style.display = "flex";
-    banner.innerHTML = `<span>🟢 An toàn — dữ liệu đã được lưu lên Google Drive của bạn.</span>`;
+    banner.innerHTML = `
+      <span>🔒 Dữ liệu đang chỉ lưu trên máy này — gỡ tiện ích sẽ mất. Hãy kết nối Drive hoặc tải backup.</span>
+      <span class="banner-acts">
+        <button id="connectDriveQuick">☁ Kết nối Drive</button>
+        <button id="backupNow" class="ghost">⬇ Backup</button>
+      </span>
+    `;
+    $("connectDriveQuick").onclick = () => chrome.runtime.openOptionsPage();
+    $("backupNow").onclick = () => $("exportBtn").click();
   });
 }
 
@@ -675,6 +699,8 @@ $("importFile").onchange = (e) => {
 };
 
 $("optionsBtn").onclick = () => chrome.runtime.openOptionsPage();
+if ($("helpBtn")) $("helpBtn").onclick = () =>
+  chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
 if ($("syncDot")) $("syncDot").onclick = () => chrome.runtime.openOptionsPage();
 
 if (isWindowMode) {
@@ -697,15 +723,42 @@ async function getBrowsingTab() {
   return null;
 }
 
+// Trang có thể mở TRƯỚC khi cài/cập nhật extension → content script chưa có sẵn.
+// Khi gửi lệnh thất bại, tự tiêm content.js + content.css rồi thử lại.
+async function ensureContentScript(tabId) {
+  if (!chrome.scripting) return false;
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 $("rescanBtn").onclick = async () => {
   const tab = await getBrowsingTab();
   if (!tab) return;
-  try {
-    await chrome.tabs.sendMessage(tab.id, { type: "FORCE_RESCAN" });
+  const ok = () => {
     $("rescanBtn").classList.add("ok");
     setTimeout(() => $("rescanBtn").classList.remove("ok"), 1500);
-  } catch (e) {
-    toast("Trang này không nhận được lệnh (chrome:// hoặc chưa load)", "error");
+  };
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: "FORCE_RESCAN" });
+    ok();
+    return;
+  } catch (e) { /* content script chưa có → thử tiêm bên dưới */ }
+  // Fallback: tiêm content script rồi gửi lại lệnh
+  const injected = await ensureContentScript(tab.id);
+  if (!injected) {
+    toast("Trang này không chạy được tiện ích (vd chrome://, cửa hàng Web Store)", "error");
+    return;
+  }
+  try {
+    await chrome.tabs.sendMessage(tab.id, { type: "FORCE_RESCAN" });
+    ok();
+  } catch (e2) {
+    toast("Trang chưa tải xong — thử lại sau giây lát", "error");
   }
 };
 
@@ -747,15 +800,17 @@ if (isWindowMode) {
   document.body.classList.add("window-mode");
 }
 
-load();
-renderSiteBar();
+load(); // load() sẽ tự gọi renderSiteBar() sau khi settings sẵn sàng
 
 // Giữ popup đồng bộ với storage: khi dữ liệu đổi từ nơi khác (đồng bộ kéo về,
 // content script sửa/xoá…), cập nhật biến trong popup để lần "save" sau KHÔNG
 // ghi đè bản cũ. Bỏ qua khi đang sửa inline để không mất chữ đang gõ.
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
-  if (changes.settings && changes.settings.newValue) settings = changes.settings.newValue;
+  if (changes.settings && changes.settings.newValue) {
+    settings = changes.settings.newValue;
+    renderSiteBar(); // blacklist có thể đổi từ Options/tab khác → cập nhật bar
+  }
   if (changes.words && changes.words.newValue) {
     words = changes.words.newValue;
     if (!document.querySelector(".editing")) {

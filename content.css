@@ -357,6 +357,7 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   flex-shrink: 0;
 }
 .vocab-note-mini-card .vn-mini-x,
+.vocab-note-mini-card .vn-mini-settings,
 .vocab-note-mini-card .vn-mini-speak {
   background: none;
   border: none;
@@ -374,12 +375,14 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   justify-content: center;
 }
 .vocab-note-mini-card .vn-mini-x:hover,
+.vocab-note-mini-card .vn-mini-settings:hover,
 .vocab-note-mini-card .vn-mini-speak:hover { background: rgba(255,255,255,0.12); color: #fff; }
 /* SVG icon đồng bộ trong tooltip + mini-card */
 .vocab-note-tooltip .vn-icon-btn svg,
 .vocab-note-tooltip .vn-action svg,
 .vocab-note-mini-card .vn-mini-btn svg,
 .vocab-note-mini-card .vn-mini-speak svg,
+.vocab-note-mini-card .vn-mini-settings svg,
 .vocab-note-mini-card .vn-mini-x svg { display: block; }
 .vocab-note-mini-card .vn-mini-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -501,18 +504,16 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   text-overflow: ellipsis;
 }
 .vocab-note-sel-btn .vn-sel-trans {
-  color: #ccc;
-  font-weight: 400;
-  max-width: 180px;
+  color: #ffd54f;
+  font-weight: 600;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .vocab-note-sel-btn .vn-sel-trans:empty { display: none; }
-.vocab-note-sel-btn .vn-sel-trans.vn-sel-loading { color: #888; }
-.vocab-note-sel-btn .vn-sel-trans::before {
-  content: "·";
-  color: #666;
-  margin-right: 6px;
+.vocab-note-sel-btn .vn-sel-trans.vn-sel-loading {
+  color: #888;
+  font-weight: 400;
 }
 .vocab-note-sel-btn .vn-sel-action {
   color: #ddd;

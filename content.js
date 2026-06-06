@@ -21,8 +21,29 @@
     learn: svgIco('<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/>'),
     del: svgIco('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'),
     save: svgIco('<polyline points="20 6 9 17 4 12"/>'),
-    copy: svgIco('<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>')
+    copy: svgIco('<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
+    help: svgIco('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+    gear: svgIco('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>')
   };
+
+  // Mở trang Cài đặt / Hướng dẫn (nhờ background mở giúp — content script không
+  // gọi trực tiếp được openOptionsPage / chrome.tabs).
+  function openExtPage(which) {
+    try { chrome.runtime.sendMessage({ type: which === "welcome" ? "OPEN_WELCOME" : "OPEN_OPTIONS" }); } catch (e) {}
+  }
+
+  // Đã ghim icon lên thanh công cụ chưa? Nếu rồi thì người dùng mở popup dễ →
+  // KHÔNG cần nút "Hướng dẫn" trong trang. Hỏi background (content script không
+  // gọi được chrome.action). Mặc định coi như chưa ghim để vẫn hiện lối tắt.
+  let actionPinned = false;
+  function refreshPinnedState() {
+    try {
+      chrome.runtime.sendMessage({ type: "GET_ACTION_PINNED" }, (res) => {
+        if (chrome.runtime.lastError || !res) return;
+        actionPinned = !!res.pinned;
+      });
+    } catch (e) {}
+  }
 
   // Icon thương hiệu — gắn vào tooltip & toast để người dùng nhận ra đây là của
   // Highlight Note, không nhầm với UI của trang web.
@@ -99,6 +120,7 @@
       words = data.words || [];
       settings = { ...settings, ...(data.settings || {}) };
       rebuildIndex();
+      refreshPinnedState(); // biết đã ghim chưa để quyết định hiện nút Hướng dẫn
       cb && cb();
     });
   }
@@ -327,6 +349,8 @@
           <button class="vn-icon-btn vn-speak" title="Phát âm">${VN_ICON.speak}</button>
           <a class="vn-icon-btn vn-dict" href="${dictUrl}" target="_blank" title="${dictTitle}">${VN_ICON.book}</a>
           <a class="vn-icon-btn vn-dict" href="${trUrl}" target="_blank" title="Google Translate">${VN_ICON.globe}</a>
+          ${actionPinned ? "" : `<button class="vn-icon-btn vn-guide" title="Hướng dẫn sử dụng">${VN_ICON.help}</button>`}
+          <button class="vn-icon-btn vn-settings" title="Cài đặt">${VN_ICON.gear}</button>
           <button class="vn-icon-btn vn-close" title="Đóng">${VN_ICON.close}</button>
         </div>
         <div class="vn-body">
@@ -375,6 +399,9 @@
     const stop = (e) => e.stopPropagation();
     tip.querySelector(".vn-speak").addEventListener("click", (e) => { stop(e); speak(w.term, lang === "ja" ? "ja-JP" : "en-US"); });
     tip.querySelector(".vn-close").addEventListener("click", (e) => { stop(e); unpinAndHide(); });
+    const tipGuide = tip.querySelector(".vn-guide");
+    if (tipGuide) tipGuide.addEventListener("click", (e) => { stop(e); openExtPage("welcome"); });
+    tip.querySelector(".vn-settings").addEventListener("click", (e) => { stop(e); openExtPage("options"); });
     tip.querySelector(".vn-delete").addEventListener("click", (e) => {
       stop(e);
       deleteWord(w.id);
@@ -500,21 +527,59 @@
   let selBtnToken = 0;             // huỷ kết quả dịch cũ khi selection đổi
   const selTransCache = new Map(); // text -> bản dịch (tránh gọi lại API)
 
+  // Ngưỡng ký tự để hiện bản dịch preview trên nút nổi. Dài hơn (cụm/đoạn dài)
+  // → bỏ qua dịch, chỉ hiện nút Lưu + Copy (dịch cả câu vừa vô ích vừa bị cắt).
+  const SEL_TRANSLATE_MAX = 40;
+
+  // Nhận diện tiếng Việt qua các ký tự đặc trưng (ă â đ ê ô ơ ư + dấu thanh
+  // khối U+1EA0–1EF9). Đích dịch là tiếng Việt nên text Việt thì khỏi dịch.
+  function isVietnamese(s) {
+    return /[ăâđêôơưĂÂĐÊÔƠƯẠ-ỹ]/.test(s);
+  }
+
+  // Bản dịch có "thật" không: rỗng hoặc trùng nguyên văn nguồn → coi như không
+  // dịch được (viết tắt, tên riêng, từ Việt không dấu… Google trả về y nguyên).
+  function isRealTranslation(src, tr) {
+    if (!tr) return false;
+    const norm = s => (s || "").trim().toLowerCase();
+    return norm(tr) !== norm(src);
+  }
+
+  // Phân tích đoạn chọn có "dịch được" không. Email / số / URL / ký hiệu thuần
+  // (không có chữ cái nào), tiếng Việt, hoặc đoạn quá dài → khỏi dịch, chỉ hiện nút Lưu.
+  function looksTranslatable(text) {
+    const t = (text || "").trim();
+    if (!t) return false;
+    if (t.length > SEL_TRANSLATE_MAX) return false;                  // cụm/đoạn dài
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return false;          // email
+    if (/^(https?:\/\/|www\.)\S+$/i.test(t)) return false;           // URL
+    if (isVietnamese(t)) return false;                               // đã là tiếng Việt
+    // Cần ít nhất 1 chữ cái thực: Latin (có dấu), Hy Lạp, Cyrillic, CJK, Kana, Hangul…
+    if (!/[A-Za-zÀ-ɏͰ-ϿЀ-ӿ぀-ヿ㐀-鿿가-힯]/.test(t)) return false;
+    return true;
+  }
+
   function buildSelBtn(text) {
     const existing = wordMap.get(text.toLowerCase()) || variantMap.get(text.toLowerCase());
-    const truncated = text.length > 22 ? text.slice(0, 20) + "…" : text;
     const brand = `<img class="vn-sel-brand" src="${BRAND_ICON}" alt="" draggable="false">`;
-    const termSpan = `<span class="vn-sel-term">${escapeHtml(truncated)}</span>`;
     const copyBtn = `<button class="vn-sel-copy" title="Sao chép">${VN_ICON.copy}</button>`;
     if (existing) {
       selBtn.className = "vocab-note-sel-btn vn-sel-exists";
       selBtn.innerHTML =
-        `<button class="vn-sel-save" disabled>${brand}${termSpan}<span class="vn-sel-action">${VN_ICON.save} Đã lưu</span></button>` +
+        `<button class="vn-sel-save" disabled>${brand}<span class="vn-sel-action">${VN_ICON.save} Đã lưu</span></button>` +
+        copyBtn;
+      return;
+    }
+    selBtn.className = "vocab-note-sel-btn";
+    if (looksTranslatable(text)) {
+      // Không hiện chữ gốc — chỉ hiện bản dịch (đổ vào .vn-sel-trans sau khi fetch xong)
+      selBtn.innerHTML =
+        `<button class="vn-sel-save">${brand}<span class="vn-sel-trans"></span><span class="vn-sel-action">${VN_ICON.save} Lưu</span></button>` +
         copyBtn;
     } else {
-      selBtn.className = "vocab-note-sel-btn";
+      // Email / số / URL… không dịch được → chỉ cần nút Lưu
       selBtn.innerHTML =
-        `<button class="vn-sel-save">${brand}${termSpan}<span class="vn-sel-trans"></span><span class="vn-sel-action">${VN_ICON.save} Lưu</span></button>` +
+        `<button class="vn-sel-save">${brand}<span class="vn-sel-action">${VN_ICON.save} Lưu</span></button>` +
         copyBtn;
     }
   }
@@ -641,10 +706,11 @@
       // Bỏ qua nếu user đã chọn từ khác trong lúc chờ
       if (myToken !== selBtnToken || selBtnCurrentText !== text) return;
       transEl.classList.remove("vn-sel-loading");
-      if (tr) {
+      if (isRealTranslation(text, tr)) {
         selTransCache.set(text, tr);
         transEl.textContent = tr;
       } else {
+        // Không dịch được (viết tắt, tên riêng…) → coi như email/số: chỉ hiện nút Lưu
         transEl.textContent = "";
       }
       positionSelBtn(rect);
@@ -986,6 +1052,8 @@
         <span class="vn-mini-term" title="${escapeHtml(term)}">${escapeHtml(term)}</span>
         <span class="vn-mini-lang">${lang.toUpperCase()}</span>
         <button class="vn-mini-speak" title="Phát âm">${VN_ICON.speak}</button>
+        ${actionPinned ? "" : `<button class="vn-mini-settings vn-mini-guide" title="Hướng dẫn sử dụng">${VN_ICON.help}</button>`}
+        <button class="vn-mini-settings vn-mini-gear" title="Cài đặt">${VN_ICON.gear}</button>
         <button class="vn-mini-x" title="Đóng">${VN_ICON.close}</button>
       </div>
       <div class="vn-mini-body">
@@ -1015,12 +1083,25 @@
     const closeBtn = card.querySelector(".vn-mini-x");
     const speakBtn = card.querySelector(".vn-mini-speak");
     speakBtn.onclick = () => speak(term, lang === "ja" ? "ja-JP" : "en-US");
+    const miniGuideBtn = card.querySelector(".vn-mini-guide");
+    if (miniGuideBtn) miniGuideBtn.onclick = () => openExtPage("welcome");
+    const miniGearBtn = card.querySelector(".vn-mini-gear");
+    if (miniGearBtn) miniGearBtn.onclick = () => openExtPage("options");
 
     let isEditing = false;
     let fetchedPhonetic = "";
 
-    // Lấy phiên âm song song
-    fetchPhonetic(term, lang).then(p => {
+    // Không dịch được (email/số/URL/đoạn dài): bỏ qua phiên âm + dịch,
+    // mở sẵn chế độ sửa với ô Nghĩa để trống cho user tự ghi.
+    const translatable = looksTranslatable(term);
+    if (!translatable) {
+      meaningInput.value = "";
+      noteInput.value = "";
+      toggleEdit(); // sang chế độ sửa, focus ô Nghĩa (input đang rỗng)
+    }
+
+    // Lấy phiên âm song song (chỉ với từ/cụm dịch được)
+    if (translatable) fetchPhonetic(term, lang).then(p => {
       if (!p) return;
       fetchedPhonetic = p;
       const el = card.querySelector(".vn-mini-phonetic");
@@ -1031,7 +1112,9 @@
 
     // Auto dịch — dùng bản đã dịch sẵn (preview từ nút Lưu) nếu có để hiện ngay
     const online = typeof navigator !== "undefined" ? navigator.onLine !== false : true;
-    if (prefetchedMeaning) {
+    if (!translatable) {
+      // đã mở sẵn ô nhập ở trên — không dịch
+    } else if (prefetchedMeaning) {
       meaningView.textContent = prefetchedMeaning;
       meaningView.classList.remove("vn-mini-empty");
       meaningInput.value = prefetchedMeaning;
@@ -1040,13 +1123,15 @@
       meaningView.classList.add("vn-mini-empty");
     } else {
       autoTranslate(term, lang).then(translated => {
-        if (translated) {
+        if (isRealTranslation(term, translated)) {
           meaningView.textContent = translated;
           meaningView.classList.remove("vn-mini-empty");
           meaningInput.value = translated;
         } else {
-          meaningView.textContent = "(không dịch được — bấm Sửa để nhập tay)";
-          meaningView.classList.add("vn-mini-empty");
+          // Không dịch được (viết tắt, tên riêng, từ Việt không dấu…) → mở sẵn ô
+          // nhập trống như trường hợp email/số.
+          meaningInput.value = "";
+          if (!isEditing) toggleEdit();
         }
         positionMiniCard(card, anchorRect);
       });

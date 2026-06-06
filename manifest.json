@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Highlight Note – Tô sáng, ghi chú & dịch web",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tô sáng từ & cụm từ trên mọi trang web, ghi chú, tự dịch và ôn lại — đa ngôn ngữ, lưu cục bộ, không theo dõi.",
   "permissions": [
     "storage",
@@ -9,7 +9,8 @@
     "activeTab",
     "alarms",
     "identity",
-    "downloads"
+    "downloads",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"
