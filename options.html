@@ -78,6 +78,11 @@
     input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); background: #fff; }
     .check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
     .check input { width: 16px; height: 16px; accent-color: var(--brand); }
+    .subopts {
+      margin-top: 12px; padding-left: 18px;
+      border-left: 2px solid var(--line);
+      display: flex; flex-direction: column; gap: 11px;
+    }
     .hint { color: var(--ink-faint); font-size: 12.5px; margin-top: 6px; }
     textarea {
       width: 100%; padding: 10px; border: 1px solid var(--line);
@@ -247,15 +252,9 @@
     </div>
 
     <div class="row">
-      <label for="threshold">Ngưỡng mặc định cho mục mới (số lần hover)</label>
+      <label for="threshold">Ngưỡng "đã thuộc" cho mục mới (số lần gặp)</label>
       <input type="number" id="threshold" min="1" max="200" value="20" />
-      <div class="hint">Số lần hover trước khi extension nhắc bạn xem đã nhớ chưa.</div>
-    </div>
-
-    <div class="row">
-      <label for="extendBy">Số lần gia hạn khi đạt ngưỡng</label>
-      <input type="number" id="extendBy" min="1" max="200" value="20" />
-      <div class="hint">Khi vượt ngưỡng, ngưỡng tự cộng thêm bấy nhiêu lần (KHÔNG xoá tự động). Bạn xoá thủ công khi đã nhớ.</div>
+      <div class="hint">Khi bạn gặp (hover) một từ đủ số lần này, extension tự đánh dấu <b>đã thuộc</b> và ngừng tô sáng từ đó. Dữ liệu KHÔNG bị xoá — từ vẫn còn trong danh sách, có thể bỏ đánh dấu bất cứ lúc nào.</div>
     </div>
 
     <div class="row">
@@ -307,6 +306,19 @@
     <div class="row">
       <label class="check"><input type="checkbox" id="showToasts" /> Hiện thông báo nhỏ (toast)</label>
       <div class="hint">Các thông báo góc màn hình khi lưu/sửa/xoá từ (đã gắn icon Highlight Note để khỏi nhầm với web). Tắt nếu thấy phiền — khi tắt sẽ ẩn <b>toàn bộ</b> toast (kể cả nút "Hoàn tác" khi xoá).</div>
+    </div>
+
+    <div class="row">
+      <label class="check"><input type="checkbox" id="showSelButton" /> Hiện thanh thao tác khi bôi đen</label>
+      <div class="hint">Khi bôi đen chữ trên web, hiện thanh nổi nhỏ với các nút bên dưới. Tắt cả thanh nếu thấy vướng khi đọc — vẫn lưu được bằng <b>Alt+Shift+H</b> hoặc chuột phải → "Tô sáng &amp; lưu".</div>
+      <div class="subopts">
+        <label class="check"><input type="checkbox" id="showSelSpeak" /> 🔊 Nút Phát âm</label>
+        <label class="check"><input type="checkbox" id="showSelCopy" /> 📋 Nút Sao chép</label>
+        <div>
+          <label class="check"><input type="checkbox" id="previewTranslate" /> 🌐 Dịch nhanh (xem trước nghĩa)</label>
+          <div class="hint" style="margin-top:4px">Vừa bôi đen là gọi Google Translate để hiện sẵn nghĩa trên nút Lưu. Tắt nếu không muốn gửi chữ đang chọn lên mạng cho tới khi thật sự bấm <b>Lưu</b>.</div>
+        </div>
+      </div>
     </div>
 
     <div class="row">

@@ -25,7 +25,6 @@ chrome.runtime.onInstalled.addListener((details) => {
     if (!data.settings) {
       updates.settings = {
         defaultThreshold: 20,
-        extendBy: 20,
         hoverCooldownMs: 300000,
         highlightColor: "#ffeb3b",
         highlightStyle: "underline",
@@ -36,7 +35,11 @@ chrome.runtime.onInstalled.addListener((details) => {
         composerOpen: false,
         blacklistedHosts: [],
         syncEnabled: true,
-        showToasts: true
+        showToasts: true,
+        previewTranslate: true,
+        showSelButton: true,
+        showSelCopy: true,
+        showSelSpeak: true
       };
     }
     if (Object.keys(updates).length > 0) chrome.storage.local.set(updates);
@@ -50,7 +53,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   chrome.tabs.sendMessage(tab.id, { type: "PROMPT_ADD_WORD", term });
 });
 
-// Phím tắt Ctrl+Shift+V: lấy text đang chọn → mở mini-card
+// Phím tắt Alt+Shift+H: lấy text đang chọn → mở mini-card
 chrome.commands.onCommand.addListener(async (cmd) => {
   if (cmd === "add-selected-word") {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

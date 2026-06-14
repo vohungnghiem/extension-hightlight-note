@@ -3,7 +3,6 @@ const $ = (id) => document.getElementById(id);
 chrome.storage.local.get("settings", ({ settings }) => {
   const s = settings || {};
   $("threshold").value = s.defaultThreshold ?? 20;
-  $("extendBy").value = s.extendBy ?? 20;
   $("cooldown").value = Math.round((s.hoverCooldownMs ?? 300000) / 1000);
   $("color").value = s.highlightColor ?? "#ffeb3b";
   $("highlightStyle").value = s.highlightStyle ?? "underline";
@@ -11,6 +10,10 @@ chrome.storage.local.get("settings", ({ settings }) => {
   $("caseSensitive").checked = !!s.caseSensitive;
   $("showReview").checked = s.showReview !== false;
   $("showToasts").checked = s.showToasts !== false;
+  $("previewTranslate").checked = s.previewTranslate !== false;
+  $("showSelButton").checked = s.showSelButton !== false;
+  $("showSelCopy").checked = s.showSelCopy !== false;
+  $("showSelSpeak").checked = s.showSelSpeak !== false;
   $("blacklist").value = (s.blacklistedHosts || []).join("\n");
   $("syncEnabled").checked = s.syncEnabled !== false;
   $("syncMode").value = s.syncMode === "drive" ? "drive" : "auto";
@@ -92,7 +95,6 @@ function saveTopSettings() {
     const settings = {
       ...(cur || {}),
       defaultThreshold: Math.max(1, parseInt($("threshold").value) || 20),
-      extendBy: Math.max(1, parseInt($("extendBy").value) || 20),
       hoverCooldownMs: Math.max(1, parseInt($("cooldown").value) || 300) * 1000,
       highlightColor: $("color").value,
       highlightStyle: $("highlightStyle").value,
@@ -100,6 +102,10 @@ function saveTopSettings() {
       caseSensitive: $("caseSensitive").checked,
       showReview: $("showReview").checked,
       showToasts: $("showToasts").checked,
+      previewTranslate: $("previewTranslate").checked,
+      showSelButton: $("showSelButton").checked,
+      showSelCopy: $("showSelCopy").checked,
+      showSelSpeak: $("showSelSpeak").checked,
       blacklistedHosts: $("blacklist").value.split("\n").map(s => s.trim()).filter(Boolean)
     };
     chrome.storage.local.set({ settings }, () => setAutosaveState("saved"));
@@ -115,7 +121,7 @@ function saveTopSettingsDebounced() {
 }
 
 // Checkbox + chọn màu → lưu ngay (thao tác dứt khoát, không cần debounce).
-["showReview", "caseSensitive", "showToasts"].forEach(id =>
+["showReview", "caseSensitive", "showToasts", "previewTranslate", "showSelButton", "showSelCopy", "showSelSpeak"].forEach(id =>
   $(id).addEventListener("change", saveTopSettings));
 $("color").addEventListener("change", saveTopSettings);
 $("color").addEventListener("input", () => { updateHlPreview(); saveTopSettingsDebounced(); }); // kéo bảng màu
@@ -127,7 +133,7 @@ $("hlThickness").addEventListener("input", () => { updateHlPreview(); saveTopSet
 $("hlThickness").addEventListener("change", saveTopSettings);
 
 // Ô số → debounce khi gõ, lưu chốt khi rời ô / Enter.
-["threshold", "extendBy", "cooldown"].forEach(id => {
+["threshold", "cooldown"].forEach(id => {
   $(id).addEventListener("input", saveTopSettingsDebounced);
   $(id).addEventListener("change", saveTopSettings);
 });

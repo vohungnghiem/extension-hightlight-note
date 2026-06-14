@@ -327,7 +327,7 @@ function render() {
     const empty = document.createElement("div");
     empty.className = "empty";
     empty.innerHTML = words.length === 0
-      ? "Chưa có mục nào.<br>Bôi đen chữ trên web → chuột phải → 'Tô sáng & lưu'<br>hoặc Ctrl+Shift+V"
+      ? "Chưa có mục nào.<br>Bôi đen chữ trên web → chuột phải → 'Tô sáng & lưu'<br>hoặc Alt+Shift+H"
       : "Không tìm thấy.";
     list.appendChild(empty);
     return;
@@ -358,9 +358,9 @@ function render() {
       </div>
       <div class="actions">
         ${w.learned
-          ? `<button class="ic-btn unlearn" data-id="${w.id}" title="Bỏ đánh dấu đã thuộc">${ICON.unlearn}</button>`
-          : `<button class="ic-btn learn" data-id="${w.id}" title="Đánh dấu đã thuộc">${ICON.learn}</button>`}
-        <button class="ic-btn toggle-word" data-id="${w.id}" title="${w.disabled ? "Bật lại highlight" : "Tắt highlight"}">${w.disabled ? ICON.bellOff : ICON.bell}</button>
+          ? `<button class="ic-btn unlearn" data-id="${w.id}" title="Bỏ đánh dấu đã thuộc (tô sáng lại)">${ICON.unlearn}</button>`
+          : `<button class="ic-btn learn" data-id="${w.id}" title="Đánh dấu đã thuộc (giữ từ, ngừng tô sáng)">${ICON.learn}</button>`}
+        <button class="ic-btn toggle-word" data-id="${w.id}" title="${w.disabled ? "Bật lại tô sáng" : "Tạm ẩn tô sáng (vẫn giữ trong danh sách)"}">${w.disabled ? ICON.bellOff : ICON.bell}</button>
         <button class="ic-btn edit" data-id="${w.id}" title="Sửa">${ICON.edit}</button>
         <button class="ic-btn del" data-id="${w.id}" title="Xoá">${ICON.del}</button>
       </div>
@@ -551,9 +551,13 @@ $("bulkSave").onclick = () => {
 };
 
 // ---------- Quiz mode ----------
-let quizQueue = [];
-let quizIdx = 0;
-let quizMode = "en2vi"; // hiển thị English, đoán nghĩa
+// Mỗi phần tử là { w, requeued }. Từ trả lời "Chưa thuộc" / "Bỏ qua" sẽ được
+// đẩy LẠI một lần xuống cuối hàng để hỏi lại trong cùng phiên; "Đã thuộc" thì
+// cộng tiến độ. Cuối phiên hiện điểm tổng kết.
+let quizList = [];
+let quizPos = 0;
+let quizStats = { good: 0, again: 0 };
+const quizRatio = (w) => (w.hoverCount || 0) / (w.autoDeleteAt || 20);
 
 $("quizBtn").onclick = () => {
   const candidates = words.filter(w => !w.disabled && !w.learned && w.meaning);
@@ -562,11 +566,13 @@ $("quizBtn").onclick = () => {
     return;
   }
   // Ưu tiên từ mới + warm, giới hạn 10 từ
-  quizQueue = candidates
-    .sort((a, b) => ((a.hoverCount || 0) / (a.autoDeleteAt || 20)) - ((b.hoverCount || 0) / (b.autoDeleteAt || 20)))
+  const picked = candidates
+    .sort((a, b) => quizRatio(a) - quizRatio(b))
     .slice(0, 10)
     .sort(() => Math.random() - 0.5);
-  quizIdx = 0;
+  quizList = picked.map(w => ({ w, requeued: false }));
+  quizPos = 0;
+  quizStats = { good: 0, again: 0 };
   $("quizModal").style.display = "flex";
   showQuizCard();
 };
@@ -575,15 +581,20 @@ function showQuizCard() {
   const card = $("quizCard");
   const actions = $("quizActions");
   const prog = $("quizProgress");
-  if (quizIdx >= quizQueue.length) {
+  if (quizPos >= quizList.length) {
     prog.textContent = "";
-    card.innerHTML = `<div class="q-meaning">🎉 Hết câu hỏi!</div>`;
+    const reviewed = quizStats.good + quizStats.again;
+    card.innerHTML = `
+      <div class="q-meaning">🎉 Hoàn thành!</div>
+      <div class="q-summary">✅ <b>${quizStats.good}</b> đã thuộc &nbsp;·&nbsp; 🔁 <b>${quizStats.again}</b> cần ôn lại</div>
+    `;
     actions.innerHTML = `<button class="btn-primary" id="quizClose">Đóng</button>`;
     $("quizClose").onclick = () => { $("quizModal").style.display = "none"; render(); };
     return;
   }
-  const w = quizQueue[quizIdx];
-  prog.textContent = `${quizIdx + 1} / ${quizQueue.length}`;
+  const item = quizList[quizPos];
+  const w = item.w;
+  prog.textContent = `${quizPos + 1} / ${quizList.length}`;
   card.innerHTML = `
     <div class="q-term">${escapeHtml(w.term)}</div>
     <div class="q-meaning q-hidden">(bấm để xem nghĩa)</div>
@@ -595,17 +606,25 @@ function showQuizCard() {
     card.querySelector(".q-meaning").className = "q-meaning";
     card.querySelector(".q-meaning").textContent = w.meaning;
   };
+  // Đẩy từ xuống cuối hàng để hỏi lại (chỉ 1 lần, tránh lặp vô hạn).
+  const requeue = () => { if (!item.requeued) quizList.push({ w, requeued: true }); };
   actions.innerHTML = `
     <button class="btn-bad" id="qBad">Chưa thuộc</button>
     <button class="btn-skip" id="qSkip">Bỏ qua</button>
     <button class="btn-good" id="qGood">Đã thuộc (+5)</button>
   `;
-  $("qBad").onclick = () => { quizIdx++; showQuizCard(); };
-  $("qSkip").onclick = () => { quizIdx++; showQuizCard(); };
+  $("qBad").onclick = () => { quizStats.again++; requeue(); quizPos++; showQuizCard(); };
+  $("qSkip").onclick = () => { requeue(); quizPos++; showQuizCard(); };
   $("qGood").onclick = () => {
     w.hoverCount = (w.hoverCount || 0) + 5;
+    // Gặp/ôn đủ ngưỡng → tự đánh dấu đã thuộc (đồng nhất với hành vi khi hover trên web).
+    if (!w.learned && w.hoverCount >= (w.autoDeleteAt || 20)) {
+      w.learned = true;
+      w.learnedAt = new Date().toISOString();
+    }
     save();
-    quizIdx++;
+    quizStats.good++;
+    quizPos++;
     showQuizCard();
   };
 }

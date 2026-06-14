@@ -49,6 +49,13 @@ html[data-vocab-style="outline"] .vocab-note-highlight {
 }
 html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opacity: 0.85; }
 
+/* ===== Focus bàn phím: viền rõ để biết đang chọn từ nào ===== */
+.vocab-note-highlight:focus-visible {
+  outline: 2px solid var(--vocab-color, #ffeb3b);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 /* ===== Hover: tô nền đầy + chữ tương phản cho MỌI kiểu ===== */
 .vocab-note-highlight:hover {
   background-color: var(--vocab-color, #ffeb3b) !important;
@@ -261,6 +268,27 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 }
 .vocab-note-tooltip.pinned .vn-hint { display: none; }
 
+/* Toast stack: container cố định, toast xếp chồng không đè nhau */
+.vocab-note-toast-stack {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+  pointer-events: none;
+  max-height: 80vh;
+  overflow: hidden;
+}
+.vocab-note-toast-stack .vocab-note-toast {
+  position: static;
+  bottom: auto;
+  right: auto;
+  pointer-events: auto;
+}
+
 /* Toast */
 .vocab-note-toast {
   position: fixed;
@@ -464,6 +492,7 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 }
 /* Nút con dùng chung */
 .vocab-note-sel-btn .vn-sel-save,
+.vocab-note-sel-btn .vn-sel-speak,
 .vocab-note-sel-btn .vn-sel-copy {
   background: transparent;
   border: none;
@@ -478,12 +507,15 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 .vocab-note-sel-btn .vn-sel-save { padding: 7px 12px 7px 9px; }
 .vocab-note-sel-btn .vn-sel-save:not(:disabled):hover { background: rgba(255,255,255,0.1); }
 .vocab-note-sel-btn .vn-sel-save:disabled { cursor: default; opacity: 0.7; }
+.vocab-note-sel-btn .vn-sel-speak,
 .vocab-note-sel-btn .vn-sel-copy {
   padding: 7px 12px;
   color: #aaa;
   border-left: 1px solid rgba(255,255,255,0.12);
 }
+.vocab-note-sel-btn .vn-sel-speak:hover,
 .vocab-note-sel-btn .vn-sel-copy:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.vocab-note-sel-btn .vn-sel-speak svg,
 .vocab-note-sel-btn .vn-sel-copy svg { display: block; }
 .vocab-note-sel-btn .vn-sel-copy.vn-sel-copied {
   color: #69db7c;

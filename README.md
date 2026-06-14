@@ -22,10 +22,10 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 | | |
 |---|---|
 | 🟡 **Auto-highlight** | Mọi từ trong danh sách được tô màu ngay trên trang web đang đọc, không cần thao tác gì thêm |
-| 💾 **Lưu nhanh** | Bôi đen từ → `Ctrl+Shift+V` (hoặc chuột phải) → mini-card hiện ngay sát từ, tự dịch sang tiếng Việt |
+| 💾 **Lưu nhanh** | Bôi đen từ → `Alt+Shift+H` (hoặc chuột phải) → mini-card hiện ngay sát từ, tự dịch sang tiếng Việt |
 | 🔤 **Phiên âm IPA** | Tự lấy phiên âm cho từ tiếng Anh qua `dictionaryapi.dev` (miễn phí) |
 | 🌐 **Auto-translate** | Dịch tự động qua Google Translate, bạn chỉ cần click **Lưu** |
-| 📊 **Progress** | Mỗi từ có thanh tiến độ riêng: hover càng nhiều → càng "thuộc", tự quyết khi nào xoá |
+| 📊 **Progress** | Mỗi từ có thanh tiến độ riêng: gặp (hover) đủ ngưỡng → tự đánh dấu **đã thuộc** & ngừng tô sáng (không xoá dữ liệu) |
 | 🎯 **Quiz mode** | Ôn tập kiểu flash-card, ưu tiên từ mới và đang học |
 | 📋 **Bulk add** | Dán cả danh sách `word - nghĩa - ghi chú`, mỗi dòng một từ |
 | 🚫 **Per-site blacklist** | Tắt highlight ở những site bạn không muốn (Gmail, dashboard nội bộ, ...) |
@@ -42,7 +42,7 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 ## Cách dùng
 
 ### Thêm từ
-- **Đang đọc web** → bôi đen từ → `Ctrl+Shift+V` → mini-card xuất hiện cạnh từ, tự dịch + phiên âm → bấm **Lưu**
+- **Đang đọc web** → bôi đen từ → `Alt+Shift+H` → mini-card xuất hiện cạnh từ, tự dịch + phiên âm → bấm **Lưu**
 - **Click icon** → form `+ Thêm` để nhập thủ công
 - **Bulk** → dán nhiều dòng cùng lúc
 
@@ -50,13 +50,13 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 
 | Phím | Hành động |
 |---|---|
-| `Ctrl + Shift + V` | Lưu từ đang bôi đen |
+| `Alt + Shift + H` | Lưu từ đang bôi đen |
 | `Ctrl + Shift + Y` | Mở popup Highlight Note |
 
 Đổi phím tắt tại `chrome://extensions/shortcuts`.
 
 ### Hover counter
-Mỗi lần rê chuột vào từ được highlight, counter tăng (với cooldown 15s để tránh đếm trùng). Thanh progress trong tooltip cho biết bạn đã "ngấm" từ này bao nhiêu — khi cảm thấy đủ, tự xoá thủ công.
+Mỗi lần rê chuột vào từ được highlight, counter tăng (mặc định cooldown 5 phút để mỗi lần gặp mới được tính 1 lần). Thanh progress trong tooltip cho biết bạn đã gặp từ này bao nhiêu lần. **Khi đạt ngưỡng (mặc định 20), extension tự đánh dấu từ là "đã thuộc" và ngừng tô sáng** — dữ liệu KHÔNG bị xoá, từ vẫn nằm trong danh sách và bạn có thể bỏ đánh dấu bất cứ lúc nào. Đổi ngưỡng / cooldown trong **Cài đặt**.
 
 ## Workaround IME tiếng Việt (Linux)
 
@@ -124,7 +124,10 @@ Tier 1 chạy ngay không cần gì. Để bật Tier 2 (Drive):
 ## Lưu ý privacy
 
 - Tất cả từ vựng lưu **cục bộ** trong `chrome.storage.local`, không gửi đi đâu
-- Chỉ gọi mạng khi: bạn lưu từ mới (dịch + IPA), hoặc click icon từ điển trong tooltip
+- Khi nào gọi mạng:
+  - **Lưu từ mới** → dịch (Google Translate) + lấy phiên âm IPA (dictionaryapi.dev)
+  - **Dịch nhanh khi bôi đen** (xem trước trên nút Lưu) → gửi đoạn đang chọn lên Google Translate. Tính năng này **bật sẵn** nhưng có thể **tắt** trong *Cài đặt → Dịch nhanh khi bôi đen*; tắt thì chỉ dịch sau khi bạn bấm Lưu.
+  - **Click icon từ điển / dịch trong tooltip** → mở trang tra cứu
 - Endpoint dùng: `translate.googleapis.com`, `api.dictionaryapi.dev`, `jisho.org`, `dictionary.cambridge.org` — đều là API/site public, không cần key, không tracking
 
 ## Tác giả

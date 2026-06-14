@@ -493,6 +493,7 @@ body {
 .quiz-card .q-term { font-size: 23px; font-weight: 800; color: var(--brand-ink); margin-bottom: 8px; }
 .quiz-card .q-meaning { font-size: 16px; color: var(--ink); }
 .quiz-card .q-hidden { color: var(--ink-faint); font-style: italic; }
+.quiz-card .q-summary { margin-top: 12px; font-size: 14px; color: var(--ink-soft); }
 .quiz-progress { font-size: 12px; color: var(--ink-faint); text-align: center; }
 
 /* ===== Toast ===== */

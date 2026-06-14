@@ -61,15 +61,21 @@
     caseSensitive: false,
     enabled: true,
     hoverCooldownMs: 300000, // 5 phút: mỗi từ chỉ đếm tối đa 1 lần / 5 phút
-    extendBy: 20,            // số lần gia hạn khi đạt ngưỡng
     blacklistedHosts: [],    // mảng hostname không highlight
-    showToasts: true         // hiện thông báo nhỏ (toast)
+    showToasts: true,        // hiện thông báo nhỏ (toast)
+    previewTranslate: true,  // dịch nhanh khi bôi đen (xem trước trước khi lưu)
+    showSelButton: true,     // hiện thanh nổi khi bôi đen text
+    showSelCopy: true,       // nút Sao chép trên thanh nổi
+    showSelSpeak: true       // nút Phát âm trên thanh nổi
   };
   let wordMap = new Map(); // termLower -> word object
   let variantMap = new Map(); // variantLower -> word object (cho stem matching EN)
   let combinedRegex = null;
 
   // Sinh các biến thể tiếng Anh phổ biến để khớp "generic" với "generics", "manage" với "managing"...
+  // Cố ý KHÔNG sinh đuôi "-er/-ers/-d" rời: chúng hay tạo từ NGHĨA KHÁC (use→user,
+  // read→reader) khiến tô sáng nhầm. Chỉ giữ các biến thể chia số nhiều / thì cơ bản
+  // gần nghĩa gốc (-s/-es/-ed/-ing và quy tắc bỏ "e", "y→ies").
   function enVariants(term) {
     const lc = term.toLowerCase();
     const set = new Set([lc]);
@@ -78,21 +84,17 @@
     set.add(lc + "ed");
     set.add(lc + "ing");
     set.add(lc + "'s");
-    set.add(lc + "d");
-    set.add(lc + "er");
-    set.add(lc + "ers");
     if (lc.endsWith("e")) {
       set.add(lc.slice(0, -1) + "ing");
       set.add(lc.slice(0, -1) + "ed");
-      set.add(lc.slice(0, -1) + "er");
     }
     if (lc.endsWith("y")) {
       set.add(lc.slice(0, -1) + "ies");
       set.add(lc.slice(0, -1) + "ied");
-      set.add(lc.slice(0, -1) + "ier");
     }
-    // CVC doubling: infer→inferred/inferring, stop→stopped, plan→planning, occur→occurred
-    // Quy tắc: kết thúc phụ âm–nguyên âm–phụ âm, phụ âm cuối không phải w/x/y
+    // CVC doubling: stop→stopped/stopping, plan→planning, occur→occurred
+    // Quy tắc: kết thúc phụ âm–nguyên âm–phụ âm, phụ âm cuối không phải w/x/y.
+    // Chỉ thêm -ed/-ing (không thêm -er/-ers để tránh danh từ nghĩa khác).
     if (lc.length >= 3) {
       const c1 = lc[lc.length - 3];
       const vw = lc[lc.length - 2];
@@ -102,8 +104,6 @@
       if (isCons(c1) && isVowel(vw) && isCons(c2) && !"wxy".includes(c2)) {
         set.add(lc + c2 + "ed");
         set.add(lc + c2 + "ing");
-        set.add(lc + c2 + "er");
-        set.add(lc + c2 + "ers");
       }
     }
     return Array.from(set);
@@ -251,6 +251,11 @@
       span.dataset.term = wRef.term.toLowerCase();
       const pct = (wRef.hoverCount || 0) / (wRef.autoDeleteAt || 20);
       span.dataset.level = pct >= 0.7 ? "hot" : pct >= 0.3 ? "warm" : "new";
+      // A11y: cho phép focus bằng bàn phím (Tab) và đọc bằng screen-reader.
+      span.tabIndex = 0;
+      span.setAttribute("role", "button");
+      span.setAttribute("aria-label",
+        wRef.meaning ? `${m[0]} — ${wRef.meaning}` : `${m[0]} (Highlight Note)`);
       span.textContent = m[0];
       frag.appendChild(span);
       lastIndex = m.index + m[0].length;
@@ -363,8 +368,8 @@
         </div>
         <div class="vn-actions">
           <button class="vn-action vn-edit" title="Sửa nghĩa/ghi chú">${VN_ICON.edit}</button>
-          <button class="vn-action vn-mute" title="${w.disabled ? "Bật lại highlight" : "Tắt highlight"}">${w.disabled ? VN_ICON.bellOff : VN_ICON.bell}</button>
-          <button class="vn-action vn-learn" title="Đánh dấu đã thuộc (lưu lại nhưng không highlight)">${VN_ICON.learn}</button>
+          <button class="vn-action vn-mute" title="${w.disabled ? "Bật lại tô sáng" : "Tạm ẩn tô sáng (vẫn giữ trong danh sách)"}">${w.disabled ? VN_ICON.bellOff : VN_ICON.bell}</button>
+          <button class="vn-action vn-learn" title="Đánh dấu đã thuộc (giữ từ, ngừng tô sáng)">${VN_ICON.learn}</button>
           <button class="vn-action vn-danger vn-delete" title="Xoá hẳn">${VN_ICON.del}</button>
         </div>
         <div class="vn-edit-area" style="display:none">
@@ -562,12 +567,18 @@
   function buildSelBtn(text) {
     const existing = wordMap.get(text.toLowerCase()) || variantMap.get(text.toLowerCase());
     const brand = `<img class="vn-sel-brand" src="${BRAND_ICON}" alt="" draggable="false">`;
-    const copyBtn = `<button class="vn-sel-copy" title="Sao chép">${VN_ICON.copy}</button>`;
+    // Các nút phụ bật/tắt theo cài đặt. Phát âm chỉ hiện với từ/cụm ngắn (đọc cả
+    // đoạn dài vừa vô nghĩa vừa lâu).
+    const speakBtn = (settings.showSelSpeak !== false && text.length <= 60)
+      ? `<button class="vn-sel-speak" title="Phát âm">${VN_ICON.speak}</button>` : "";
+    const copyBtn = (settings.showSelCopy !== false)
+      ? `<button class="vn-sel-copy" title="Sao chép">${VN_ICON.copy}</button>` : "";
+    const extras = speakBtn + copyBtn;
     if (existing) {
       selBtn.className = "vocab-note-sel-btn vn-sel-exists";
       selBtn.innerHTML =
         `<button class="vn-sel-save" disabled>${brand}<span class="vn-sel-action">${VN_ICON.save} Đã lưu</span></button>` +
-        copyBtn;
+        extras;
       return;
     }
     selBtn.className = "vocab-note-sel-btn";
@@ -575,13 +586,19 @@
       // Không hiện chữ gốc — chỉ hiện bản dịch (đổ vào .vn-sel-trans sau khi fetch xong)
       selBtn.innerHTML =
         `<button class="vn-sel-save">${brand}<span class="vn-sel-trans"></span><span class="vn-sel-action">${VN_ICON.save} Lưu</span></button>` +
-        copyBtn;
+        extras;
     } else {
       // Email / số / URL… không dịch được → chỉ cần nút Lưu
       selBtn.innerHTML =
         `<button class="vn-sel-save">${brand}<span class="vn-sel-action">${VN_ICON.save} Lưu</span></button>` +
-        copyBtn;
+        extras;
     }
+  }
+
+  // Phát âm đoạn đang chọn (theo ngôn ngữ nhận diện được).
+  function doSpeakSelection() {
+    const text = selBtnCurrentText;
+    if (text) speak(text, detectLang(text) === "ja" ? "ja-JP" : "en-US");
   }
 
   function doCopySelection() {
@@ -658,6 +675,7 @@
     selBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (e.target.closest(".vn-sel-speak")) { doSpeakSelection(); return; }
       if (e.target.closest(".vn-sel-copy")) { doCopySelection(); return; }
       if (e.target.closest(".vn-sel-save")) { doSaveSelection(); return; }
     });
@@ -692,6 +710,9 @@
     if (existing) return;
     const transEl = btn.querySelector(".vn-sel-trans");
     if (!transEl) return;
+    // Tôn trọng cài đặt privacy: tắt "dịch nhanh khi bôi đen" → KHÔNG gọi mạng lúc
+    // chọn chữ. Vẫn lưu bình thường (dịch sẽ chạy trong mini-card sau khi bấm Lưu).
+    if (settings.previewTranslate === false) return;
     const cached = selTransCache.get(text);
     if (cached) {
       transEl.textContent = cached;
@@ -724,6 +745,9 @@
 
   document.addEventListener("mouseup", (e) => {
     if (settings.enabled === false || isHostBlacklisted()) { hideSelBtn(); return; }
+    // Người dùng có thể tắt thanh nổi "Lưu" khi bôi đen (vẫn lưu được bằng
+    // Alt+Shift+H hoặc chuột phải → "Tô sáng & lưu").
+    if (settings.showSelButton === false) { hideSelBtn(); return; }
     if (e.target.closest && e.target.closest(
       ".vocab-note-sel-btn, .vocab-note-mini-card, .vocab-note-tooltip, .vocab-note-modal-overlay"
     )) return;
@@ -835,10 +859,38 @@
     }
   }, true);
 
-  // ESC để đóng tooltip đã ghim
+  // A11y: focus bằng bàn phím (Tab) vào từ highlight → hiện tooltip như khi hover.
+  document.addEventListener("focusin", (e) => {
+    const span = e.target.closest && e.target.closest(".vocab-note-highlight");
+    if (!span) return;
+    clearTimeout(showTimer);
+    clearTimeout(hideTimer);
+    activeSpan = span;
+    countedThisHover = false;
+    showTooltip(span);
+  });
+  document.addEventListener("focusout", (e) => {
+    const span = e.target.closest && e.target.closest(".vocab-note-highlight");
+    if (!span || pinned) return;
+    scheduleHide();
+  });
+
   document.addEventListener("keydown", (e) => {
+    // ESC để đóng tooltip đã ghim
     if (e.key === "Escape" && pinned) {
       unpinAndHide();
+      return;
+    }
+    // Enter/Space trên từ đang focus → ghim tooltip (tương đương click)
+    if (e.key === "Enter" || e.key === " ") {
+      const span = e.target.closest && e.target.closest(".vocab-note-highlight");
+      if (span) {
+        e.preventDefault();
+        pinned = true;
+        clearTimeout(hideTimer);
+        activeSpan = span;
+        showTooltip(span);
+      }
     }
   });
 
@@ -867,16 +919,31 @@
     // Cooldown: kiểm tra trên w.lastCountedAt (persistent — không bị reset khi reload)
     if (now - (w.lastCountedAt || 0) < cooldown) return;
     // Atomic: đọc lại storage để tránh race với tab khác
+    let justMastered = false;
     updateWordById(w.id, (rec) => {
       if (now - (rec.lastCountedAt || 0) < cooldown) return null; // tab khác vừa đếm rồi
       rec.hoverCount = (rec.hoverCount || 0) + 1;
       rec.lastCountedAt = now;
+      // Gặp đủ ngưỡng → tự đánh dấu "đã thuộc" (giữ từ, ngừng tô sáng).
+      // KHÔNG xoá dữ liệu — chỉ chuyển sang trạng thái learned cho an toàn.
+      if (!rec.learned && rec.hoverCount >= (rec.autoDeleteAt || 20)) {
+        rec.learned = true;
+        rec.learnedAt = new Date().toISOString();
+        justMastered = true;
+      }
       // Cập nhật cache local để UI phản hồi ngay
       w.hoverCount = rec.hoverCount;
       w.lastCountedAt = rec.lastCountedAt;
+      if (justMastered) { w.learned = true; w.learnedAt = rec.learnedAt; }
       return rec;
     }).then(ok => {
-      if (ok) updateVisibleTooltip(term);
+      if (!ok) return;
+      if (justMastered) {
+        unpinAndHide();
+        showToast(`🎓 Đã gặp đủ ${w.autoDeleteAt || 20} lần — đánh dấu "${w.term}" là đã thuộc`);
+      } else {
+        updateVisibleTooltip(term);
+      }
     });
   }
 
@@ -918,6 +985,17 @@
   }
 
   // ---------- Toasts ----------
+  // Container cố định để toast XẾP CHỒNG (không đè lên nhau như trước khi mỗi toast
+  // tự fixed cùng một góc). Toast mới rơi xuống sát góc, toast cũ đẩy lên trên.
+  let toastStack = null;
+  function ensureToastStack() {
+    if (toastStack && toastStack.isConnected) return toastStack;
+    toastStack = document.createElement("div");
+    toastStack.className = "vocab-note-toast-stack";
+    document.body.appendChild(toastStack);
+    return toastStack;
+  }
+
   function showToast(msg, opts = {}) {
     // Công tắc tắt toast là công tắc DUY NHẤT: tắt = ẩn TẤT CẢ toast (kể cả toast
     // có nút hành động như "Hoàn tác"). Bật = mọi toast hoạt động bình thường.
@@ -946,7 +1024,7 @@
         t.appendChild(b);
       });
     }
-    document.body.appendChild(t);
+    ensureToastStack().appendChild(t);
     const dur = opts.duration ?? (opts.actions ? 6000 : 3500);
     if (dur > 0) setTimeout(() => t.remove(), dur);
   }
@@ -1224,7 +1302,7 @@
         break;
       case "ADD_FROM_SELECTION": {
         const sel = window.getSelection && window.getSelection().toString().trim();
-        if (!sel) showToast("Bôi đen từ/đoạn cần lưu rồi bấm Ctrl+Shift+V", { warn: true });
+        if (!sel) showToast("Bôi đen từ/đoạn cần lưu rồi bấm Alt+Shift+H", { warn: true });
         else if (sel.length > 2000) showToast("Đoạn quá dài (tối đa 2000 ký tự)", { warn: true });
         else openAddModal(sel);
         break;
@@ -1245,8 +1323,8 @@
     let needRescan = false;
     if (changes.settings) {
       settings = { ...settings, ...(changes.settings.newValue || {}) };
-      // Tắt extension → ẩn ngay thanh chọn (selection popup) đang hiển thị
-      if (settings.enabled === false) hideSelBtn();
+      // Tắt extension / tắt thanh "Lưu" → ẩn ngay thanh chọn đang hiển thị
+      if (settings.enabled === false || settings.showSelButton === false) hideSelBtn();
       // Áp ngay màu/kiểu/độ dày highlight (kể cả khi không đổi danh sách từ)
       applyHighlightVars();
       // Kiểm tra blacklist trang hiện tại
