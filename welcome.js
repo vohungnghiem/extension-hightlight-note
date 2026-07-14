@@ -1,3 +1,14 @@
+// Áp theme đã lưu (pre-paint đã đặt theo hệ thống; đây là chỉnh lại nếu người
+// dùng đã chọn cố định Sáng/Tối trong popup).
+try {
+  chrome.storage.local.get("settings", ({ settings }) => {
+    const t = (settings && settings.theme) || "auto";
+    const eff = (t === "light" || t === "dark") ? t
+      : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", eff);
+  });
+} catch (e) {}
+
 // Nút "Bảo vệ dữ liệu": bật chế độ Drive rồi kết nối Google Drive ngay.
 const protectBtn = document.getElementById("protectBtn");
 const protectMsg = document.getElementById("protectMsg");

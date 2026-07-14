@@ -24,9 +24,10 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 | 🟡 **Auto-highlight** | Mọi từ trong danh sách được tô màu ngay trên trang web đang đọc, không cần thao tác gì thêm |
 | 💾 **Lưu nhanh** | Bôi đen từ → `Alt+Shift+H` (hoặc chuột phải) → mini-card hiện ngay sát từ, tự dịch sang tiếng Việt |
 | 🔤 **Phiên âm IPA** | Tự lấy phiên âm cho từ tiếng Anh qua `dictionaryapi.dev` (miễn phí) |
-| 🌐 **Auto-translate** | Dịch tự động qua Google Translate, bạn chỉ cần click **Lưu** |
+| 🌐 **Auto-translate** | Dịch tự động qua Google Translate (tự nhận ngôn ngữ nguồn: Anh, Pháp, Đức, Nhật…), bạn chỉ cần click **Lưu** |
+| 🌗 **Giao diện Sáng / Tối** | Tự đổi theo hệ thống; có nút chuyển tay 🌙/☀️ ngay trong popup |
 | 📊 **Progress** | Mỗi từ có thanh tiến độ riêng: gặp (hover) đủ ngưỡng → tự đánh dấu **đã thuộc** & ngừng tô sáng (không xoá dữ liệu) |
-| 🎯 **Quiz mode** | Ôn tập kiểu flash-card, ưu tiên từ mới và đang học |
+| 🔁 **Ôn tập giãn cách (SRS)** | Lịch ôn tự giãn (1→3→7→14… ngày) theo mức nhớ; badge số từ **cần ôn hôm nay** trên icon + thanh nhắc trong popup; buổi ôn flashcard chấm điểm Quên/Nhớ/Dễ |
 | 📋 **Bulk add** | Dán cả danh sách `word - nghĩa - ghi chú`, mỗi dòng một từ |
 | 🚫 **Per-site blacklist** | Tắt highlight ở những site bạn không muốn (Gmail, dashboard nội bộ, ...) |
 | ⬇⬆ **Backup JSON** | Export/Import toàn bộ từ vựng + settings, nhắc backup sau 7 ngày |
@@ -99,8 +100,10 @@ Dữ liệu đồng bộ giữa các máy theo cơ chế **lai, tự nâng cấp
 1. **Mặc định — Storage Sync (0 cấu hình):** từ vựng tự đồng bộ qua tài khoản Chrome
    giữa các máy đã đăng nhập cùng tài khoản Google. Miễn phí, không cần đăng nhập gì thêm.
    Giới hạn ~100KB.
-2. **Khi vượt ~100KB — Google Drive:** tự đẩy toàn bộ vào thư mục ẩn `appDataFolder`
-   trên Drive của chính bạn (riêng tư, miễn phí, dung lượng lớn).
+2. **Khi vượt ~100KB — Google Drive:** tự đẩy toàn bộ vào 1 file
+   `Highlight Note - Tu vung.json` trong Google Drive của chính bạn (bạn nhìn thấy &
+   tải được). Quyền `drive.file` nên extension chỉ truy cập đúng file nó tạo,
+   không đọc file khác của bạn. Miễn phí, dung lượng lớn.
 3. **Import/Export JSON thủ công** vẫn dùng song song để backup nhanh / chuyển máy offline.
 
 Bật/tắt và xem trạng thái trong **Cài đặt → Đồng bộ tài khoản**. Chỉ báo nhỏ ở góc popup:

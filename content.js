@@ -251,8 +251,10 @@
       span.dataset.term = wRef.term.toLowerCase();
       const pct = (wRef.hoverCount || 0) / (wRef.autoDeleteAt || 20);
       span.dataset.level = pct >= 0.7 ? "hot" : pct >= 0.3 ? "warm" : "new";
-      // A11y: cho phép focus bằng bàn phím (Tab) và đọc bằng screen-reader.
-      span.tabIndex = 0;
+      // A11y: screen-reader vẫn đọc được qua role + aria-label. KHÔNG đặt
+      // tabindex=0 để tránh tạo hàng trăm điểm dừng Tab trên trang có nhiều từ
+      // trùng (gây rối cho người dùng bàn phím). Vẫn focus được bằng JS khi cần.
+      span.tabIndex = -1;
       span.setAttribute("role", "button");
       span.setAttribute("aria-label",
         wRef.meaning ? `${m[0]} — ${wRef.meaning}` : `${m[0]} (Highlight Note)`);
@@ -344,7 +346,7 @@
       ? `https://jisho.org/search/${encodeURIComponent(w.term)}`
       : `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w.term)}`;
     const dictTitle = lang === "ja" ? "Jisho" : "Cambridge";
-    const trUrl = `https://translate.google.com/?sl=${lang === "ja" ? "ja" : "en"}&tl=vi&text=${encodeURIComponent(w.term)}`;
+    const trUrl = `https://translate.google.com/?sl=auto&tl=vi&text=${encodeURIComponent(w.term)}`;
     tip.innerHTML = `
       <div class="vn-card">
         <div class="vn-head">
@@ -1051,8 +1053,10 @@
   // ---------- Auto-translate qua Google Translate (endpoint công khai) ----------
   async function autoTranslate(text, srcLang) {
     try {
-      const sl = srcLang === "ja" ? "ja" : "en";
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=vi&dt=t&q=${encodeURIComponent(text)}`;
+      // sl=auto: để Google tự nhận diện ngôn ngữ nguồn → dịch đúng cả từ Pháp/Đức/
+      // Tây Ban Nha… Trước đây ép sl="en" khiến mọi từ không phải CJK bị coi là
+      // tiếng Anh và dịch sai. (srcLang vẫn dùng cho phát âm/tra từ điển ở nơi khác.)
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(text)}`;
       const res = await fetch(url);
       if (!res.ok) return "";
       const data = await res.json();
@@ -1362,15 +1366,26 @@
 
   // ---------- MutationObserver cho SPA ----------
   let mutationDebounce = null;
+  let pendingMutationNodes = [];
   const observer = new MutationObserver((mutations) => {
     if (!combinedRegex) return;
+    // Gom addedNodes của MỌI đợt mutation vào 1 buffer chung. Trước đây debounce
+    // chỉ giữ mảng `mutations` của lần callback CUỐI → các node thêm ở những đợt
+    // bị clearTimeout huỷ sẽ không bao giờ được tô sáng. Buffer khắc phục điều đó.
+    for (const m of mutations) {
+      m.addedNodes.forEach(node => {
+        if (node.nodeType === 1 || node.nodeType === 3) pendingMutationNodes.push(node);
+      });
+    }
+    if (pendingMutationNodes.length === 0) return;
     clearTimeout(mutationDebounce);
     mutationDebounce = setTimeout(() => {
-      for (const m of mutations) {
-        m.addedNodes.forEach(node => {
-          if (node.nodeType === 1) scanNode(node);
-          else if (node.nodeType === 3 && !shouldSkip(node)) highlightTextNode(node);
-        });
+      const nodes = pendingMutationNodes;
+      pendingMutationNodes = [];
+      for (const node of nodes) {
+        if (!node.isConnected) continue; // node đã bị gỡ khỏi DOM trước khi xử lý
+        if (node.nodeType === 1) scanNode(node);
+        else if (node.nodeType === 3 && !shouldSkip(node)) highlightTextNode(node);
       }
     }, 300);
   });

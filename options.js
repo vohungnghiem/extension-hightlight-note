@@ -1,5 +1,22 @@
 const $ = (id) => document.getElementById(id);
 
+// ---------- Theme (áp theo cài đặt đã lưu; mặc định theo hệ thống) ----------
+(function initTheme() {
+  const resolve = (t) => (t === "light" || t === "dark") ? t
+    : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const apply = () => chrome.storage.local.get("settings", ({ settings }) =>
+    document.documentElement.setAttribute("data-theme", resolve((settings && settings.theme) || "auto")));
+  apply();
+  try {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () =>
+      chrome.storage.local.get("settings", ({ settings }) => {
+        if (!settings || !settings.theme || settings.theme === "auto") apply();
+      }));
+  } catch (e) {}
+  // Theme có thể đổi từ popup khi trang này đang mở → cập nhật ngay.
+  chrome.storage.onChanged.addListener((c, area) => { if (area === "local" && c.settings) apply(); });
+})();
+
 chrome.storage.local.get("settings", ({ settings }) => {
   const s = settings || {};
   $("threshold").value = s.defaultThreshold ?? 20;
@@ -9,6 +26,8 @@ chrome.storage.local.get("settings", ({ settings }) => {
   $("hlThickness").value = s.highlightThickness ?? 2;
   $("caseSensitive").checked = !!s.caseSensitive;
   $("showReview").checked = s.showReview !== false;
+  $("srsReminder").checked = s.srsReminder !== false;
+  $("srsNewPerDay").value = s.srsNewPerDay ?? 20;
   $("showToasts").checked = s.showToasts !== false;
   $("previewTranslate").checked = s.previewTranslate !== false;
   $("showSelButton").checked = s.showSelButton !== false;
@@ -101,6 +120,8 @@ function saveTopSettings() {
       highlightThickness: Math.min(5, Math.max(1, parseInt($("hlThickness").value) || 2)),
       caseSensitive: $("caseSensitive").checked,
       showReview: $("showReview").checked,
+      srsReminder: $("srsReminder").checked,
+      srsNewPerDay: Math.min(500, Math.max(1, parseInt($("srsNewPerDay").value) || 20)),
       showToasts: $("showToasts").checked,
       previewTranslate: $("previewTranslate").checked,
       showSelButton: $("showSelButton").checked,
@@ -121,7 +142,7 @@ function saveTopSettingsDebounced() {
 }
 
 // Checkbox + chọn màu → lưu ngay (thao tác dứt khoát, không cần debounce).
-["showReview", "caseSensitive", "showToasts", "previewTranslate", "showSelButton", "showSelCopy", "showSelSpeak"].forEach(id =>
+["showReview", "srsReminder", "caseSensitive", "showToasts", "previewTranslate", "showSelButton", "showSelCopy", "showSelSpeak"].forEach(id =>
   $(id).addEventListener("change", saveTopSettings));
 $("color").addEventListener("change", saveTopSettings);
 $("color").addEventListener("input", () => { updateHlPreview(); saveTopSettingsDebounced(); }); // kéo bảng màu
@@ -133,7 +154,7 @@ $("hlThickness").addEventListener("input", () => { updateHlPreview(); saveTopSet
 $("hlThickness").addEventListener("change", saveTopSettings);
 
 // Ô số → debounce khi gõ, lưu chốt khi rời ô / Enter.
-["threshold", "cooldown"].forEach(id => {
+["threshold", "cooldown", "srsNewPerDay"].forEach(id => {
   $(id).addEventListener("input", saveTopSettingsDebounced);
   $(id).addEventListener("change", saveTopSettings);
 });

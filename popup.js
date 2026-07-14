@@ -4,6 +4,34 @@ const $ = (id) => document.getElementById(id);
 let words = [];
 let settings = {};
 
+// ---------- Theme (Sáng / Tối, mặc định theo hệ thống) ----------
+function effectiveTheme() {
+  const t = settings.theme || "auto";
+  if (t === "light" || t === "dark") return t;
+  return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+}
+function applyTheme() {
+  const eff = effectiveTheme();
+  document.documentElement.setAttribute("data-theme", eff);
+  const btn = $("themeBtn");
+  if (btn) {
+    btn.textContent = eff === "dark" ? "☀️" : "🌙";
+    btn.title = eff === "dark" ? "Chuyển sang giao diện Sáng" : "Chuyển sang giao diện Tối";
+  }
+}
+if ($("themeBtn")) $("themeBtn").onclick = () => {
+  // Toggle dứt khoát Sáng↔Tối (ghi đè "auto"). Muốn quay về theo hệ thống thì
+  // xoá key theme — nhưng đa số người dùng chỉ cần bật/tắt tối, giữ đơn giản.
+  settings.theme = effectiveTheme() === "dark" ? "light" : "dark";
+  saveSettings();
+  applyTheme();
+};
+try {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (!settings.theme || settings.theme === "auto") applyTheme();
+  });
+} catch (e) {}
+
 // Bộ icon SVG dùng chung (nét đồng nhất, ăn theo màu chữ) — thay cho emoji rời rạc
 const svg = (paths) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
@@ -58,6 +86,7 @@ function load() {
       if (!w.lang) { w.lang = detectLang(w.term); migrated = true; }
     }
     if (migrated) save();
+    applyTheme();
     $("enabledToggle").checked = settings.enabled;
     applyComposerState();
     render();
@@ -287,6 +316,7 @@ function renderBackupBanner() {
 // ---------- Render list ----------
 function render() {
   renderStats();
+  renderReviewBar();
   const keyword = $("searchInput").value.trim().toLowerCase();
   const sortBy = $("sortSel").value;
   const filterBy = $("filterSel").value;
@@ -343,6 +373,8 @@ function render() {
     item.className = "item" + (w.disabled ? " disabled" : "") + (w.learned ? " learned" : "") + " lv-" + lv;
     const statusBadge = w.learned ? " · 🎓 ĐÃ THUỘC" : (w.disabled ? " · ĐÃ TẮT" : "");
     const countBadge = (!w.learned && !w.disabled) ? ` · <span class="hint-count" title="Số lần đã gặp / ngưỡng">${w.hoverCount || 0}/${w.autoDeleteAt || 20}</span>` : "";
+    const srsBadge = (!w.learned && !w.disabled && w.srsDue && Date.parse(w.srsDue) > Date.now())
+      ? ` · <span class="srs-due" title="Lịch ôn giãn cách">🔁 ${srsDueLabel(w.srsDue)}</span>` : "";
     item.innerHTML = `
       <div class="info">
         <div class="term">
@@ -353,7 +385,7 @@ function render() {
         ${w.phonetic ? `<div class="phon">${escapeHtml(w.phonetic)}</div>` : ""}
         ${w.meaning ? `<div class="meaning">${escapeHtml(w.meaning)}</div>` : ""}
         ${w.note ? `<div class="note">${escapeHtml(w.note)}</div>` : ""}
-        <div class="meta">${formatDate(w.createdAt)}${statusBadge}${countBadge}</div>
+        <div class="meta">${formatDate(w.createdAt)}${statusBadge}${countBadge}${srsBadge}</div>
         <div class="progress"><div style="width:${pct}%"></div></div>
       </div>
       <div class="actions">
@@ -550,83 +582,154 @@ $("bulkSave").onclick = () => {
   render();
 };
 
-// ---------- Quiz mode ----------
-// Mỗi phần tử là { w, requeued }. Từ trả lời "Chưa thuộc" / "Bỏ qua" sẽ được
-// đẩy LẠI một lần xuống cuối hàng để hỏi lại trong cùng phiên; "Đã thuộc" thì
-// cộng tiến độ. Cuối phiên hiện điểm tổng kết.
-let quizList = [];
-let quizPos = 0;
-let quizStats = { good: 0, again: 0 };
-const quizRatio = (w) => (w.hoverCount || 0) / (w.autoDeleteAt || 20);
+// ---------- Ôn tập giãn cách (SRS — SM-2 rút gọn) ----------
+// Mỗi từ mang lịch riêng: srsDue (khi nào ôn lại), srsInterval (ngày), srsEase,
+// srsReps. Đến hạn (srsDue <= giờ) hoặc chưa có lịch = "đến hạn". Buổi ôn lấy
+// từ đến hạn trước, rồi thêm tối đa `srsNewPerDay` từ mới. Chấm điểm:
+//   Quên → về đầu, ôn lại ngay trong phiên   Nhớ → giãn theo ease   Dễ → giãn xa hơn.
+// Interval đủ lớn (SRS_GRAD_DAYS) → tự đánh dấu "đã thuộc" (giữ từ, ngừng tô sáng).
+const SRS_DAY_MS = 86400000;
+const SRS_GRAD_DAYS = 45;
 
-$("quizBtn").onclick = () => {
-  const candidates = words.filter(w => !w.disabled && !w.learned && w.meaning);
-  if (candidates.length < 3) {
-    toast("Cần ít nhất 3 mục có nghĩa để ôn tập", "warn");
-    return;
+function srsBuckets(now = Date.now()) {
+  const overdue = [], fresh = [];
+  for (const w of words) {
+    if (w.learned || w.disabled || !w.meaning) continue;
+    if (!w.srsDue) fresh.push(w);
+    else if (Date.parse(w.srsDue) <= now) overdue.push(w);
   }
-  // Ưu tiên từ mới + warm, giới hạn 10 từ
-  const picked = candidates
-    .sort((a, b) => quizRatio(a) - quizRatio(b))
-    .slice(0, 10)
-    .sort(() => Math.random() - 0.5);
-  quizList = picked.map(w => ({ w, requeued: false }));
-  quizPos = 0;
-  quizStats = { good: 0, again: 0 };
-  $("quizModal").style.display = "flex";
-  showQuizCard();
-};
+  return { overdue, fresh };
+}
+function srsDueCount() {
+  if (settings.srsReminder === false) return 0;
+  const { overdue, fresh } = srsBuckets();
+  return overdue.length + Math.min(fresh.length, settings.srsNewPerDay || 20);
+}
+function srsBuildDeck() {
+  const { overdue, fresh } = srsBuckets();
+  const limit = settings.srsNewPerDay || 20;
+  overdue.sort((a, b) => Date.parse(a.srsDue) - Date.parse(b.srsDue)); // quá hạn lâu nhất trước
+  const newOnes = [...fresh]
+    .sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""))
+    .slice(0, limit);
+  return overdue.concat(newOnes);
+}
+function srsGrade(w, grade) {
+  const now = Date.now();
+  let ease = w.srsEase || 2.5;
+  let reps = w.srsReps || 0;
+  let interval = w.srsInterval || 0;
+  if (grade === "again") {
+    reps = 0; interval = 0; ease = Math.max(1.3, ease - 0.2);
+  } else if (grade === "good") {
+    reps += 1;
+    interval = reps === 1 ? 1 : reps === 2 ? 3 : Math.max(1, Math.round(interval * ease));
+  } else { // easy
+    reps += 1; ease += 0.15;
+    interval = reps === 1 ? 3 : Math.max(1, Math.round(interval * ease * 1.3));
+  }
+  w.srsEase = Math.round(ease * 100) / 100;
+  w.srsReps = reps;
+  w.srsInterval = interval;
+  w.srsLast = new Date(now).toISOString();
+  w.srsDue = new Date(now + interval * SRS_DAY_MS).toISOString();
+  // Giãn đủ xa → coi như nhớ lâu dài, đánh dấu đã thuộc.
+  if (interval >= SRS_GRAD_DAYS && !w.learned) {
+    w.learned = true;
+    w.learnedAt = new Date(now).toISOString();
+  }
+}
+// Nhãn lịch ôn cho danh sách ("ôn hôm nay" / "ôn sau 3 ngày").
+function srsDueLabel(iso) {
+  const diff = Date.parse(iso) - Date.now();
+  if (diff <= 0) return "cần ôn";
+  const d = Math.ceil(diff / SRS_DAY_MS);
+  return d <= 1 ? "ôn mai" : `ôn sau ${d} ngày`;
+}
 
-function showQuizCard() {
+// Thanh nhắc "Ôn hôm nay: N từ" trên đầu danh sách.
+function renderReviewBar() {
+  const bar = $("reviewBar");
+  if (!bar) return;
+  const n = srsDueCount();
+  if (settings.srsReminder === false || n === 0) { bar.style.display = "none"; return; }
+  bar.style.display = "flex";
+  bar.innerHTML = `<span class="rb-text">🔔 Ôn hôm nay: <b>${n}</b> từ</span>
+    <button id="reviewNowBtn">Ôn ngay →</button>`;
+  $("reviewNowBtn").onclick = startReview;
+}
+
+let reviewDeck = [];
+let reviewPos = 0;
+let reviewStats = { again: 0, good: 0, easy: 0 };
+
+$("quizBtn").onclick = startReview;
+
+function startReview() {
+  let deck = srsBuildDeck();
+  if (deck.length === 0) {
+    // Không còn từ đến hạn → ôn nhẹ các từ sắp tới hạn (luyện thêm, không bắt buộc).
+    deck = words.filter(w => !w.disabled && !w.learned && w.meaning)
+      .sort((a, b) => Date.parse(a.srsDue || 0) - Date.parse(b.srsDue || 0))
+      .slice(0, 15);
+    if (deck.length === 0) { toast("Chưa có mục nào có nghĩa để ôn", "warn"); return; }
+  }
+  reviewDeck = deck.map(w => ({ w, requeued: false }));
+  reviewPos = 0;
+  reviewStats = { again: 0, good: 0, easy: 0 };
+  $("quizModal").style.display = "flex";
+  showReviewCard();
+}
+
+function showReviewCard() {
   const card = $("quizCard");
   const actions = $("quizActions");
   const prog = $("quizProgress");
-  if (quizPos >= quizList.length) {
+  if (reviewPos >= reviewDeck.length) {
     prog.textContent = "";
-    const reviewed = quizStats.good + quizStats.again;
     card.innerHTML = `
-      <div class="q-meaning">🎉 Hoàn thành!</div>
-      <div class="q-summary">✅ <b>${quizStats.good}</b> đã thuộc &nbsp;·&nbsp; 🔁 <b>${quizStats.again}</b> cần ôn lại</div>
-    `;
+      <div class="q-meaning">🎉 Xong buổi ôn!</div>
+      <div class="q-summary">✅ Nhớ <b>${reviewStats.good + reviewStats.easy}</b> &nbsp;·&nbsp; 🔁 Ôn lại <b>${reviewStats.again}</b></div>`;
     actions.innerHTML = `<button class="btn-primary" id="quizClose">Đóng</button>`;
     $("quizClose").onclick = () => { $("quizModal").style.display = "none"; render(); };
     return;
   }
-  const item = quizList[quizPos];
+  const item = reviewDeck[reviewPos];
   const w = item.w;
-  prog.textContent = `${quizPos + 1} / ${quizList.length}`;
+  prog.textContent = `${reviewPos + 1} / ${reviewDeck.length}`;
   card.innerHTML = `
     <div class="q-term">${escapeHtml(w.term)}</div>
-    <div class="q-meaning q-hidden">(bấm để xem nghĩa)</div>
-  `;
+    <div class="q-meaning q-hidden">(bấm để xem nghĩa)</div>`;
   let revealed = false;
-  card.onclick = () => {
+  const reveal = () => {
     if (revealed) return;
     revealed = true;
-    card.querySelector(".q-meaning").className = "q-meaning";
-    card.querySelector(".q-meaning").textContent = w.meaning;
+    const m = card.querySelector(".q-meaning");
+    m.className = "q-meaning";
+    m.innerHTML = escapeHtml(w.meaning) + (w.phonetic ? `<div class="q-phon">${escapeHtml(w.phonetic)}</div>` : "");
+    actions.querySelectorAll("button").forEach(b => b.disabled = false);
   };
-  // Đẩy từ xuống cuối hàng để hỏi lại (chỉ 1 lần, tránh lặp vô hạn).
-  const requeue = () => { if (!item.requeued) quizList.push({ w, requeued: true }); };
+  card.onclick = reveal;
+  // Nút chấm điểm khoá tới khi lật thẻ (bắt buộc tự nhớ trước khi xem).
   actions.innerHTML = `
-    <button class="btn-bad" id="qBad">Chưa thuộc</button>
-    <button class="btn-skip" id="qSkip">Bỏ qua</button>
-    <button class="btn-good" id="qGood">Đã thuộc (+5)</button>
-  `;
-  $("qBad").onclick = () => { quizStats.again++; requeue(); quizPos++; showQuizCard(); };
-  $("qSkip").onclick = () => { requeue(); quizPos++; showQuizCard(); };
-  $("qGood").onclick = () => {
-    w.hoverCount = (w.hoverCount || 0) + 5;
-    // Gặp/ôn đủ ngưỡng → tự đánh dấu đã thuộc (đồng nhất với hành vi khi hover trên web).
-    if (!w.learned && w.hoverCount >= (w.autoDeleteAt || 20)) {
-      w.learned = true;
-      w.learnedAt = new Date().toISOString();
-    }
+    <button class="btn-bad" id="rAgain" disabled>Quên</button>
+    <button class="btn-good" id="rGood" disabled>Nhớ</button>
+    <button class="btn-skip" id="rEasy" disabled>Dễ</button>`;
+  const grade = (g) => {
+    if (!revealed) { reveal(); return; }
+    srsGrade(w, g);
+    if (g === "again") {
+      reviewStats.again++;
+      if (!item.requeued) { item.requeued = true; reviewDeck.push({ w, requeued: true }); }
+    } else if (g === "easy") reviewStats.easy++;
+    else reviewStats.good++;
     save();
-    quizStats.good++;
-    quizPos++;
-    showQuizCard();
+    reviewPos++;
+    showReviewCard();
   };
+  $("rAgain").onclick = () => grade("again");
+  $("rGood").onclick = () => grade("good");
+  $("rEasy").onclick = () => grade("easy");
 }
 
 // ---------- Export / Import ----------
@@ -828,6 +931,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   if (changes.settings && changes.settings.newValue) {
     settings = changes.settings.newValue;
+    applyTheme();    // theme có thể đổi từ tab khác
     renderSiteBar(); // blacklist có thể đổi từ Options/tab khác → cập nhật bar
   }
   if (changes.words && changes.words.newValue) {

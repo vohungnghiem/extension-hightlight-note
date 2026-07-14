@@ -6,10 +6,14 @@ importScripts("sync.js");
 const MENU_ID = "vocab-note-add-selection";
 
 chrome.runtime.onInstalled.addListener((details) => {
-  chrome.contextMenus.create({
-    id: MENU_ID,
-    title: "Tô sáng & lưu '%s' vào Highlight Note",
-    contexts: ["selection"]
+  // removeAll trước khi create: onInstalled cũng chạy khi CẬP NHẬT phiên bản,
+  // tạo lại cùng id sẽ ném lỗi "duplicate id". Dọn sạch rồi tạo mới cho chắc.
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: MENU_ID,
+      title: "Tô sáng & lưu '%s' vào Highlight Note",
+      contexts: ["selection"]
+    });
   });
 
   // Lần cài đầu tiên → mở trang chào mừng + hướng dẫn ghim icon cho người dùng.
@@ -26,6 +30,9 @@ chrome.runtime.onInstalled.addListener((details) => {
       updates.settings = {
         defaultThreshold: 20,
         hoverCooldownMs: 300000,
+        theme: "auto",
+        srsReminder: true,
+        srsNewPerDay: 20,
         highlightColor: "#ffeb3b",
         highlightStyle: "underline",
         highlightThickness: 2,
@@ -158,7 +165,7 @@ let pushTimer = null;
 let lastPushError = null;
 let needsDriveAuth = false;
 const PUSH_DEBOUNCE_MS = 4000;
-const DEVICE_LOCAL_SETTINGS = ["syncEnabled", "syncMode", "blacklistedHosts", "composerOpen", "autoBackup", "lastExportAt"];
+const DEVICE_LOCAL_SETTINGS = ["syncEnabled", "syncMode", "blacklistedHosts", "composerOpen", "autoBackup", "lastExportAt", "theme"];
 
 async function isSyncEnabled() {
   const { settings } = await HNSync.getLocal();
@@ -380,12 +387,38 @@ async function computeSafety() {
   }
 }
 
-// Gắn/xoá badge cảnh báo trên icon tiện ích theo mức an toàn.
+// Đếm số từ CẦN ÔN hôm nay (SRS): đến hạn (srsDue<=giờ) + tối đa srsNewPerDay từ mới.
+// Không tính từ đã thuộc / đã tắt / chưa có nghĩa.
+async function computeDueCount() {
+  const { words, settings } = await HNSync.getLocal();
+  if (settings.srsReminder === false) return 0;
+  if (!words || !words.length) return 0;
+  const now = Date.now();
+  const limit = settings.srsNewPerDay || 20;
+  let overdue = 0, fresh = 0;
+  for (const w of words) {
+    if (w.learned || w.disabled || !w.meaning) continue;
+    if (!w.srsDue) fresh++;
+    else if (Date.parse(w.srsDue) <= now) overdue++;
+  }
+  return overdue + Math.min(fresh, limit);
+}
+
+// Badge trên icon: ưu tiên số từ cần ôn (nhắc học hằng ngày); nếu không có mà dữ
+// liệu đang nguy cơ mất thì hiện "!" đỏ; còn lại thì xoá badge.
 let badgeUpdating = false;
 async function updateBadge() {
   if (badgeUpdating) return;
   badgeUpdating = true;
   try {
+    const due = await computeDueCount();
+    if (due > 0) {
+      chrome.action.setBadgeText({ text: due > 99 ? "99+" : String(due) });
+      chrome.action.setBadgeBackgroundColor({ color: "#6366f1" });
+      if (chrome.action.setBadgeTextColor) chrome.action.setBadgeTextColor({ color: "#ffffff" });
+      chrome.action.setTitle({ title: `Highlight Note — 🔔 ${due} từ cần ôn hôm nay` });
+      return;
+    }
     const s = await computeSafety();
     if (s.level === "danger") {
       chrome.action.setBadgeText({ text: "!" });
@@ -481,7 +514,7 @@ chrome.runtime.onInstalled.addListener(() => {
   updateBadge();
 });
 chrome.alarms.onAlarm.addListener((a) => {
-  if (a.name === "hn-sync-pull") pullRemote().catch(() => {});
+  if (a.name === "hn-sync-pull") pullRemote().catch(() => {}).finally(() => updateBadge());
   if (a.name === "hn-auto-backup") maybeAutoBackup(false).catch(() => {}).finally(() => updateBadge());
 });
 
