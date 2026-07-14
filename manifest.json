@@ -49,6 +49,7 @@
         "<all_urls>"
       ],
       "js": [
+        "constants.js",
         "content.js"
       ],
       "css": [

@@ -33,27 +33,7 @@
   <div class="review-bar" id="reviewBar" style="display:none"></div>
   <div class="backup-banner" id="backupBanner" style="display:none"></div>
 
-  <div class="composer" id="composer">
-    <button class="composer-toggle" id="composerToggle" aria-expanded="false" title="Thêm mục mới">
-      <svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-      <span>Thêm từ hoặc cụm từ</span>
-      <svg class="composer-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-    </button>
-    <div class="composer-body">
-      <textarea id="termInput" rows="1" placeholder="Từ, cụm từ, thuật ngữ, viết tắt hoặc cả đoạn..."></textarea>
-      <input type="text" id="meaningInput" placeholder="Nghĩa" />
-      <input type="text" id="noteInput" placeholder="Ghi chú (tuỳ chọn)" />
-      <div class="row-2">
-        <button id="addBtn">+ Thêm</button>
-        <button id="bulkBtn" title="Thêm nhiều mục cùng lúc">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>Bulk
-        </button>
-        <button id="quizBtn" title="Ôn tập các mục đã lưu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>Ôn tập
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Khu Thêm chuyển sang màn hình riêng (#addScreen) mở bằng nút "＋ Thêm mục" ở dưới -->
 
   <div class="search-bar">
     <div class="search-field">
@@ -80,9 +60,23 @@
     </div>
   </div>
 
+  <div class="type-tabs" id="typeTabs" style="display:none"></div>
+  <div class="tag-bar" id="tagBar" style="display:none"></div>
+
   <div class="list" id="list"></div>
 
   <div class="site-bar" id="siteBar"></div>
+
+  <div class="add-launch">
+    <button id="openAddBtn" class="launch-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Thêm mục
+    </button>
+    <button id="quizBtn" class="launch-secondary" title="Ôn tập các mục đã lưu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+      Ôn tập
+    </button>
+  </div>
 
   <div class="toolbar">
     <button id="rescanBtn" class="ic-btn" title="Quét lại trang hiện tại">
@@ -90,6 +84,9 @@
     </button>
     <button id="exportBtn" class="ic-btn" title="Xuất file JSON (backup)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+    </button>
+    <button id="exportMdBtn" class="ic-btn" title="Xuất Markdown (Obsidian / Notion / ghi chú công việc)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="13" y2="17"></line></svg>
     </button>
     <button id="importBtn" class="ic-btn" title="Nhập file JSON (mở trong Cài đặt)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
@@ -104,6 +101,45 @@
     <button id="optionsBtn" class="ic-btn" title="Cài đặt">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
     </button>
+  </div>
+
+  <!-- Màn hình Thêm mục (phủ toàn bộ popup) -->
+  <div class="add-screen" id="addScreen" hidden>
+    <div class="add-head">
+      <button class="add-back" id="addBack" title="Quay lại danh sách" aria-label="Quay lại danh sách">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <h2>Thêm mục mới</h2>
+    </div>
+    <div class="add-body">
+      <label class="add-flabel" for="termInput">Từ / cụm từ / đoạn</label>
+      <textarea id="termInput" rows="1" placeholder="vd: agree, deadline dự án, câu cần ghi nhớ…"></textarea>
+
+      <div class="type-label">Loại mục</div>
+      <div class="type-picker" id="typePicker"></div>
+      <div class="type-hint" id="typeHint"></div>
+
+      <label class="add-flabel" for="meaningInput">Nghĩa / mô tả</label>
+      <input type="text" id="meaningInput" placeholder="Để trống sẽ tự dịch (với từ vựng)" />
+
+      <label class="add-flabel" for="noteInput">Ghi chú <span class="opt">· tuỳ chọn</span></label>
+      <input type="text" id="noteInput" placeholder="Ghi chú thêm cho mục này" />
+
+      <label class="add-flabel" for="tagsInput">Tag <span class="opt">· tuỳ chọn</span></label>
+      <input type="text" id="tagsInput" placeholder="dự-án-A, cần-đọc… (cách nhau bởi dấu phẩy)" />
+
+      <button type="button" class="bulk-link" id="bulkBtn" title="Dán nhiều dòng, thêm cùng lúc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        Thêm nhiều dòng cùng lúc
+      </button>
+    </div>
+    <div class="add-foot">
+      <button type="button" id="addCancel" class="add-cancel">Huỷ</button>
+      <button id="addBtn" class="add-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Thêm vào danh sách
+      </button>
+    </div>
   </div>
 
   <!-- Confirm/Alert generic modal -->
@@ -134,6 +170,9 @@
   <!-- Quiz modal -->
   <div class="modal-overlay" id="quizModal" style="display:none">
     <div class="modal quiz">
+      <button class="quiz-x" id="quizX" title="Đóng (Esc)" aria-label="Đóng">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
       <h3>🎯 Ôn tập</h3>
       <div class="quiz-progress" id="quizProgress"></div>
       <div class="quiz-card" id="quizCard"></div>
@@ -141,6 +180,7 @@
     </div>
   </div>
 
+  <script src="constants.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

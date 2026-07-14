@@ -67,6 +67,14 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   text-decoration-color: transparent;
 }
 
+/* ===== Màu theo LOẠI mục ===== */
+/* vocab dùng --vocab-color toàn cục (như cũ). Các loại khác ghi đè --vocab-color
+   NGAY trên span → mọi kiểu (gạch chân/nền/sóng/viền) tự lấy đúng màu loại. */
+.vocab-note-highlight[data-vn-type="important"] { --vocab-color: var(--vn-color-important, #ff5a5f); --vocab-text-color: var(--vn-text-important, #fff); }
+.vocab-note-highlight[data-vn-type="todo"]      { --vocab-color: var(--vn-color-todo, #28c76f);      --vocab-text-color: var(--vn-text-todo, #fff); }
+.vocab-note-highlight[data-vn-type="question"]  { --vocab-color: var(--vn-color-question, #9b6dff);   --vocab-text-color: var(--vn-text-question, #fff); }
+.vocab-note-highlight[data-vn-type="reference"] { --vocab-color: var(--vn-color-reference, #00bcd4);  --vocab-text-color: var(--vn-text-reference, #000); }
+
 /* ============ TOOLTIP REDESIGN ============ */
 /* Outer container: padding nhỏ chỉ đủ qua gap, không quá to để tooltip không "dính" */
 .vocab-note-tooltip {
@@ -152,6 +160,20 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 .vocab-note-tooltip .vn-body {
   padding: 8px 12px 10px;
 }
+/* Chip loại mục trong tooltip */
+.vocab-note-tooltip .vn-type-row { margin-bottom: 6px; }
+.vocab-note-tooltip .vn-type-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(255,255,255,0.08); color: #ddd;
+}
+.vocab-note-tooltip .vn-type-chip svg { width: 13px; height: 13px; }
+.vocab-note-tooltip .vn-type-chip[data-vn-type="vocab"]     { color: var(--vocab-color, #ffd54f); }
+.vocab-note-tooltip .vn-type-chip[data-vn-type="important"] { color: var(--vn-color-important, #ff5a5f); }
+.vocab-note-tooltip .vn-type-chip[data-vn-type="todo"]      { color: var(--vn-color-todo, #28c76f); }
+.vocab-note-tooltip .vn-type-chip[data-vn-type="question"]  { color: var(--vn-color-question, #9b6dff); }
+.vocab-note-tooltip .vn-type-chip[data-vn-type="reference"] { color: var(--vn-color-reference, #00bcd4); }
 .vocab-note-tooltip .vn-phonetic {
   color: #90caf9;
   font-size: 12px;
@@ -170,6 +192,14 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   margin-top: 4px;
   border-left: 2px solid #444;
   padding-left: 8px;
+}
+.vocab-note-tooltip .vn-tags {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px;
+}
+.vocab-note-tooltip .vn-tag {
+  font-size: 10.5px; font-weight: 700;
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(255,255,255,0.10); color: #cfd3dc;
 }
 
 /* Progress + meta */
@@ -415,6 +445,45 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 .vocab-note-mini-card .vn-mini-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
+/* Accent theo loại cho mini-card (dùng cho chip loại đang chọn) */
+.vocab-note-mini-card[data-vn-type="vocab"]     { --vn-mini-accent: #ffd54f; }
+.vocab-note-mini-card[data-vn-type="important"] { --vn-mini-accent: var(--vn-color-important, #ff5a5f); }
+.vocab-note-mini-card[data-vn-type="todo"]      { --vn-mini-accent: var(--vn-color-todo, #28c76f); }
+.vocab-note-mini-card[data-vn-type="question"]  { --vn-mini-accent: var(--vn-color-question, #9b6dff); }
+.vocab-note-mini-card[data-vn-type="reference"] { --vn-mini-accent: var(--vn-color-reference, #00bcd4); }
+
+/* Hàng chọn loại mục trong mini-card (icon, chọn 1) */
+.vocab-note-mini-card .vn-mini-types {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 12px 2px;
+}
+.vocab-note-mini-card .vn-mini-types-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.4px;
+  text-transform: uppercase; color: #888; margin-right: 2px;
+}
+.vocab-note-mini-card .vn-mini-type {
+  width: 30px; height: 28px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid transparent; border-radius: 8px;
+  cursor: pointer; font-size: 15px; line-height: 1;
+  opacity: 0.5; /* mờ nhẹ khi chưa chọn — emoji giữ nguyên màu, không bị xỉn */
+  transition: background 0.12s, opacity 0.12s, border-color 0.12s, transform 0.08s;
+}
+.vocab-note-mini-card .vn-mini-type:hover {
+  background: rgba(255,255,255,0.12);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+.vocab-note-mini-card .vn-mini-type.active {
+  background: color-mix(in srgb, var(--vn-mini-accent, #fff) 20%, transparent);
+  border-color: var(--vn-mini-accent, rgba(255,255,255,0.35));
+  opacity: 1;
+}
+/* Icon SVG loại đồng nhất (thay emoji) — dùng currentColor nên tự ăn theo màu chữ thẻ */
+.vocab-note-mini-card .vn-mini-type svg { width: 16px; height: 16px; display: block; }
+.vocab-note-mini-card .vn-mini-type.active svg { color: var(--vn-mini-accent, #fff); }
+
 .vocab-note-mini-card .vn-mini-body { padding: 10px 12px; }
 .vocab-note-mini-card .vn-mini-phonetic {
   color: #90caf9;
@@ -424,9 +493,11 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 }
 .vocab-note-mini-card .vn-mini-meaning-view {
   font-size: 13px;
-  color: #ffd54f;
+  color: var(--vn-mini-accent, #ffd54f);
   word-break: break-word;
   line-height: 1.4;
+  max-height: 168px;      /* đoạn dài dịch ra dài → cuộn trong thẻ, không kéo dài vô tận */
+  overflow-y: auto;
 }
 .vocab-note-mini-card .vn-mini-meaning-view.vn-mini-empty {
   color: #888;
@@ -611,3 +682,176 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 }
 .vocab-note-modal .vn-save { background: #1976d2; color: #fff; }
 .vocab-note-modal .vn-cancel { background: #eee; color: #333; }
+
+/* ============ STICKY NOTE — ghi chú dán theo URL ============ */
+/* Lớp phủ toàn màn: bản thân không chặn chuột, chỉ các thẻ con mới nhận sự kiện. */
+.vocab-note-sticky-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+}
+.vocab-note-sticky {
+  position: fixed;
+  pointer-events: auto;
+  width: 260px;
+  box-sizing: border-box;
+  background: #fff8c5;
+  color: #1f2430;
+  border-radius: 10px;
+  border-top: 4px solid var(--vns-accent, #ff5a5f);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06);
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+  animation: vn-pop-in 0.15s ease;
+}
+/* Accent màu theo loại (đồng bộ với hệ màu highlight) */
+.vocab-note-sticky[data-vn-type="vocab"]     { --vns-accent: #f2c200; }
+.vocab-note-sticky[data-vn-type="important"] { --vns-accent: var(--vn-color-important, #ff5a5f); }
+.vocab-note-sticky[data-vn-type="todo"]      { --vns-accent: var(--vn-color-todo, #28c76f); }
+.vocab-note-sticky[data-vn-type="question"]  { --vns-accent: var(--vn-color-question, #9b6dff); }
+.vocab-note-sticky[data-vn-type="reference"] { --vns-accent: var(--vn-color-reference, #00bcd4); }
+
+.vocab-note-sticky .vns-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px 7px 10px;
+  cursor: move;
+  background: rgba(0,0,0,0.03);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  touch-action: none;
+}
+.vocab-note-sticky .vns-brand { width: 16px; height: 16px; flex-shrink: 0; }
+.vocab-note-sticky .vns-title {
+  flex: 1;
+  font-weight: 700;
+  font-size: 12px;
+  color: #3a3f4b;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vocab-note-sticky .vns-btn {
+  background: none;
+  border: none;
+  color: #6a6f7a;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  padding: 0;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.vocab-note-sticky .vns-btn:hover { background: rgba(0,0,0,0.10); color: #1f2430; }
+.vocab-note-sticky .vns-btn svg { display: block; width: 14px; height: 14px; }
+
+.vocab-note-sticky .vns-view { padding: 9px 11px 11px; }
+.vocab-note-sticky .vns-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  max-height: 220px;
+  overflow: auto;
+}
+.vocab-note-sticky .vns-text.vns-empty { color: #8a8f99; font-style: italic; }
+
+.vocab-note-sticky .vns-editwrap { display: none; padding: 9px 11px 11px; }
+.vocab-note-sticky.editing .vns-view { display: none; }
+.vocab-note-sticky.editing .vns-editwrap { display: block; }
+
+.vocab-note-sticky .vns-hint {
+  font-size: 11px; line-height: 1.4; color: #7a6a2f;
+  background: rgba(0,0,0,0.045); border-radius: 6px;
+  padding: 6px 8px; margin-bottom: 8px;
+}
+.vocab-note-sticky .vns-types {
+  display: flex; align-items: center; gap: 5px;
+  margin-bottom: 8px;
+}
+.vocab-note-sticky .vns-types-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.4px;
+  text-transform: uppercase; color: #8a8f99; margin-right: 2px;
+}
+.vocab-note-sticky .vns-type {
+  width: 28px; height: 26px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.05);
+  border: 1px solid transparent; border-radius: 8px;
+  cursor: pointer; color: #5a5f6a; /* icon xám dịu, đồng nhất khi chưa chọn */
+  opacity: 0.7;
+  transition: background 0.12s, opacity 0.12s, border-color 0.12s, color 0.12s;
+}
+.vocab-note-sticky .vns-type svg { width: 15px; height: 15px; display: block; }
+.vocab-note-sticky .vns-type:hover { background: rgba(0,0,0,0.10); opacity: 1; }
+.vocab-note-sticky .vns-type.active {
+  background: rgba(0,0,0,0.08);
+  border-color: var(--vns-accent, rgba(0,0,0,0.30));
+  color: var(--vns-accent, #1f2430); /* icon lấy màu của loại khi chọn */
+  opacity: 1;
+}
+.vocab-note-sticky .vns-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 9px;
+  background: #fffdf0;
+  border: 1px solid rgba(0,0,0,0.18);
+  border-radius: 6px;
+  color: #1f2430;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 56px;
+}
+.vocab-note-sticky .vns-input:focus { outline: none; border-color: var(--vns-accent, #ff5a5f); }
+.vocab-note-sticky .vns-editact {
+  display: flex; gap: 6px; margin-top: 8px;
+}
+.vocab-note-sticky .vns-btn2 {
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.07);
+  color: #1f2430;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+}
+.vocab-note-sticky .vns-btn2:hover { background: rgba(0,0,0,0.13); }
+.vocab-note-sticky .vns-btn2 svg { width: 14px; height: 14px; }
+.vocab-note-sticky .vns-primary { background: var(--vns-accent, #ff5a5f); color: #fff; }
+.vocab-note-sticky .vns-primary:hover { filter: brightness(1.05); }
+
+/* Thu gọn: chỉ hiện 1 ghim tròn nhỏ, bấm để mở lại. */
+.vocab-note-sticky .vns-pin { display: none; }
+.vocab-note-sticky.collapsed {
+  width: auto;
+  border-top: none;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+}
+.vocab-note-sticky.collapsed .vns-head,
+.vocab-note-sticky.collapsed .vns-view,
+.vocab-note-sticky.collapsed .vns-editwrap { display: none; }
+.vocab-note-sticky.collapsed .vns-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: #fff8c5;
+  border: 2px solid var(--vns-accent, #ff5a5f);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  cursor: pointer;
+  color: var(--vns-accent, #ff5a5f);
+}
+.vocab-note-sticky.collapsed .vns-pin svg { width: 18px; height: 18px; display: block; }

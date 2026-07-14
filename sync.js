@@ -69,42 +69,10 @@
     return size <= SYNC_SAFE_BYTES ? "sync" : "drive";
   }
 
-  // ---------- Merge (chống mất dữ liệu khi nhiều máy sửa song song) ----------
-  // Union theo term (lowercase). Giữ hoverCount max, trạng thái learned mới nhất,
-  // field rỗng thì lấp từ bên kia. Tái dùng tinh thần merge trong popup import.
-  function mergeWords(localWords, remoteWords) {
-    const byTerm = new Map();
-    const keyOf = (w) => (w.term || "").toLowerCase();
-    for (const w of localWords) byTerm.set(keyOf(w), { ...w });
-    for (const r of remoteWords) {
-      const k = keyOf(r);
-      if (!byTerm.has(k)) {
-        byTerm.set(k, { ...r });
-        continue;
-      }
-      const ex = byTerm.get(k);
-      ex.hoverCount = Math.max(ex.hoverCount || 0, r.hoverCount || 0);
-      if (!ex.meaning && r.meaning) ex.meaning = r.meaning;
-      if (!ex.note && r.note) ex.note = r.note;
-      if (!ex.phonetic && r.phonetic) ex.phonetic = r.phonetic;
-      if (!ex.lang && r.lang) ex.lang = r.lang;
-      // learned: ưu tiên bản có learnedAt mới hơn
-      const exAt = ex.learnedAt ? Date.parse(ex.learnedAt) : 0;
-      const rAt = r.learnedAt ? Date.parse(r.learnedAt) : 0;
-      if (rAt > exAt) { ex.learned = !!r.learned; ex.learnedAt = r.learnedAt; }
-      else if (!ex.learnedAt && r.learned) { ex.learned = true; ex.learnedAt = r.learnedAt; }
-      if (!ex.createdAt && r.createdAt) ex.createdAt = r.createdAt;
-      if (ex.autoDeleteAt == null && r.autoDeleteAt != null) ex.autoDeleteAt = r.autoDeleteAt;
-    }
-    return Array.from(byTerm.values());
-  }
-
-  // Merge settings: last-write-wins ở cấp đối tượng, nhưng không nuốt mất key local.
-  function mergeSettings(localSettings, remoteSettings, remoteIsNewer) {
-    if (!remoteSettings) return localSettings || {};
-    if (remoteIsNewer) return { ...(localSettings || {}), ...remoteSettings };
-    return { ...(remoteSettings || {}), ...(localSettings || {}) };
-  }
+  // Đồng bộ dùng Last-Write-Wins: khi remote mới hơn (theo syncRev), background
+  // thay NGUYÊN mảng words của local bằng remote (xem applyRemoteIfNewer). Không
+  // merge từng-item ở luồng đồng bộ — hợp với 1 người dùng vài máy ít sửa song song.
+  // (Việc hợp nhất/union chỉ diễn ra ở luồng Import thủ công trong popup/options.)
 
   // ---------- Tier 1: chrome.storage.sync (chunked) ----------
 
@@ -361,7 +329,6 @@
     QUOTA_BYTES, SYNC_SAFE_BYTES, META_KEY, CHUNK_PREFIX, DRIVE_FILE_NAME,
     // helpers
     getDeviceId, getLocal, estimateSize, decideTier,
-    mergeWords, mergeSettings,
     // tier 1
     pushToSync, pullFromSync, syncBytesInUse, getRemoteMeta, syncGet, syncSet, syncRemove,
     // tier 2

@@ -4,6 +4,7 @@
 importScripts("sync.js");
 
 const MENU_ID = "vocab-note-add-selection";
+const MENU_ID_STICKY = "vocab-note-add-sticky";
 
 chrome.runtime.onInstalled.addListener((details) => {
   // removeAll trước khi create: onInstalled cũng chạy khi CẬP NHẬT phiên bản,
@@ -13,6 +14,12 @@ chrome.runtime.onInstalled.addListener((details) => {
       id: MENU_ID,
       title: "Tô sáng & lưu '%s' vào Highlight Note",
       contexts: ["selection"]
+    });
+    // Ghim ghi chú lên trang — không cần bôi đen chữ nào (hiện khi chuột phải vùng trống).
+    chrome.contextMenus.create({
+      id: MENU_ID_STICKY,
+      title: "📌 Ghim ghi chú lên trang này (Highlight Note)",
+      contexts: ["page"]
     });
   });
 
@@ -54,6 +61,11 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (!tab) return;
+  if (info.menuItemId === MENU_ID_STICKY) {
+    chrome.tabs.sendMessage(tab.id, { type: "ADD_STICKY_NOTE" });
+    return;
+  }
   if (info.menuItemId !== MENU_ID || !info.selectionText) return;
   const term = info.selectionText.trim();
   if (!term || term.length > 2000) return; // cho phép lưu cả đoạn dài (thuật ngữ, viết tắt, ghi chú)
@@ -397,6 +409,7 @@ async function computeDueCount() {
   const limit = settings.srsNewPerDay || 20;
   let overdue = 0, fresh = 0;
   for (const w of words) {
+    if (w.sticky) continue; // ghi chú dán trang không vào lịch ôn
     if (w.learned || w.disabled || !w.meaning) continue;
     if (!w.srsDue) fresh++;
     else if (Date.parse(w.srsDue) <= now) overdue++;

@@ -241,6 +241,33 @@
       vertical-align: super; text-decoration: none !important; border: none !important; opacity: .7;
     }
 
+    /* Màu theo loại mục */
+    .type-colors { display: flex; flex-direction: column; gap: 12px; }
+    .type-color-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 4px 0;
+    }
+    .tc-label { font-weight: 700; display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .tc-ico { display: inline-flex; color: var(--ink-faint); }
+    .tc-ico svg { width: 17px; height: 17px; display: block; }
+    /* Preview nhỏ theo loại — dùng lại cơ chế màu/kiểu của .hl-preview */
+    .tc-preview { margin-left: auto; font-size: 14px; color: var(--ink); white-space: nowrap; }
+    .tc-preview .vocab-note-highlight {
+      border-bottom: var(--vocab-thickness, 2px) solid var(--vocab-color, #ffeb3b); padding: 0 1px;
+    }
+    .tc-preview[data-vocab-style="background"] .vocab-note-highlight {
+      border-bottom: none; background: var(--vocab-color); color: var(--vocab-text-color, #000);
+      border-radius: 3px; padding: 0 4px;
+    }
+    .tc-preview[data-vocab-style="wavy"] .vocab-note-highlight {
+      border-bottom: none; text-decoration: underline; text-decoration-style: wavy;
+      text-decoration-color: var(--vocab-color); text-decoration-thickness: var(--vocab-thickness, 2px);
+      text-underline-offset: 3px;
+    }
+    .tc-preview[data-vocab-style="outline"] .vocab-note-highlight {
+      border: var(--vocab-thickness, 2px) solid var(--vocab-color); border-radius: 4px; padding: 0 4px;
+    }
+
     /* ===== DARK MODE (html[data-theme="dark"] do options.js đặt) ===== */
     html[data-theme="dark"] {
       --brand: #8b87f5; --brand-strong: #a5a1ff; --brand-ink: #c6c3fb; --brand-weak: #262a45;
@@ -386,6 +413,33 @@
     </div>
   </div>
 
+  <div class="card">
+    <p class="card-title">Màu theo loại mục</p>
+    <div class="hint" style="margin-bottom:14px">Ngoài "Từ vựng", extension còn tô sáng theo các loại phục vụ công việc: <b>Quan trọng</b>, <b>Cần làm</b>, <b>Câu hỏi</b>, <b>Tư liệu</b>. Mỗi loại một màu riêng. ("Từ vựng" dùng màu ở mục <b>Hiển thị tô sáng</b> phía trên.)</div>
+    <div class="type-colors">
+      <div class="type-color-row">
+        <span class="tc-label"><span class="tc-ico" data-type="important"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Quan trọng</span>
+        <span class="tc-preview" data-type="important"><span class="vocab-note-highlight">chữ mẫu</span></span>
+        <input type="color" id="colorImportant" value="#ff5a5f" />
+      </div>
+      <div class="type-color-row">
+        <span class="tc-label"><span class="tc-ico" data-type="todo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Cần làm</span>
+        <span class="tc-preview" data-type="todo"><span class="vocab-note-highlight">chữ mẫu</span></span>
+        <input type="color" id="colorTodo" value="#28c76f" />
+      </div>
+      <div class="type-color-row">
+        <span class="tc-label"><span class="tc-ico" data-type="question"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Câu hỏi</span>
+        <span class="tc-preview" data-type="question"><span class="vocab-note-highlight">chữ mẫu</span></span>
+        <input type="color" id="colorQuestion" value="#9b6dff" />
+      </div>
+      <div class="type-color-row">
+        <span class="tc-label"><span class="tc-ico" data-type="reference"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span> Tư liệu</span>
+        <span class="tc-preview" data-type="reference"><span class="vocab-note-highlight">chữ mẫu</span></span>
+        <input type="color" id="colorReference" value="#00bcd4" />
+      </div>
+    </div>
+  </div>
+
   <div class="card autosave-note">
     <div class="autosave-inline">
       <span class="an-ico">✓</span>
@@ -511,6 +565,7 @@
     <span id="apText">Tự động lưu</span>
   </div>
 
+  <script src="constants.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

@@ -21,6 +21,8 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 
 | | |
 |---|---|
+| 🏷️ **Đa loại mục** | Không chỉ học từ — mỗi mục có **loại** riêng, màu riêng: 📚 Từ vựng · ⭐ Quan trọng · ✅ Cần làm · ❓ Câu hỏi · 📎 Tư liệu. Biến extension thành công cụ tô sáng đa mục đích cho công việc & nghiên cứu. Chọn loại ngay khi lưu (mini-card / popup), lọc danh sách theo loại. Dữ liệu cũ tự nhận là "Từ vựng" — không phá vỡ gì. |
+| 📌 **Neo đoạn văn theo trang** | Bôi đen **cả câu/đoạn dài** để ghi nhớ → extension lưu URL + ngữ cảnh và **tự tô sáng lại đúng đoạn đó mỗi khi bạn mở lại trang** (dù đoạn trải nhiều thẻ/nhiều dòng). Popup có link 🔗 **nguồn** để nhảy về đúng trang. Cực hợp đọc tài liệu / nghiên cứu. (Từ/cụm ngắn vẫn tô ở mọi trang như cũ.) |
 | 🟡 **Auto-highlight** | Mọi từ trong danh sách được tô màu ngay trên trang web đang đọc, không cần thao tác gì thêm |
 | 💾 **Lưu nhanh** | Bôi đen từ → `Alt+Shift+H` (hoặc chuột phải) → mini-card hiện ngay sát từ, tự dịch sang tiếng Việt |
 | 🔤 **Phiên âm IPA** | Tự lấy phiên âm cho từ tiếng Anh qua `dictionaryapi.dev` (miễn phí) |
@@ -31,6 +33,7 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 | 📋 **Bulk add** | Dán cả danh sách `word - nghĩa - ghi chú`, mỗi dòng một từ |
 | 🚫 **Per-site blacklist** | Tắt highlight ở những site bạn không muốn (Gmail, dashboard nội bộ, ...) |
 | ⬇⬆ **Backup JSON** | Export/Import toàn bộ từ vựng + settings, nhắc backup sau 7 ngày |
+| 📝 **Xuất Markdown** | Xuất toàn bộ mục ra file `.md` (nhóm theo loại; To-do thành checkbox `- [ ]`) — đưa thẳng vào Obsidian / Notion / ghi chú công việc |
 | 🇯🇵 **Hỗ trợ tiếng Nhật** | Tự nhận kana/kanji, link sang Jisho thay vì Cambridge |
 
 ## Cài đặt
@@ -127,6 +130,7 @@ Tier 1 chạy ngay không cần gì. Để bật Tier 2 (Drive):
 ## Lưu ý privacy
 
 - Tất cả từ vựng lưu **cục bộ** trong `chrome.storage.local`, không gửi đi đâu
+- Đoạn văn được **neo theo trang** có lưu kèm **URL trang nguồn** (để tô sáng lại đúng chỗ) — vẫn nằm cục bộ, chỉ rời máy nếu chính bạn bật đồng bộ / export
 - Khi nào gọi mạng:
   - **Lưu từ mới** → dịch (Google Translate) + lấy phiên âm IPA (dictionaryapi.dev)
   - **Dịch nhanh khi bôi đen** (xem trước trên nút Lưu) → gửi đoạn đang chọn lên Google Translate. Tính năng này **bật sẵn** nhưng có thể **tắt** trong *Cài đặt → Dịch nhanh khi bôi đen*; tắt thì chỉ dịch sau khi bạn bấm Lưu.

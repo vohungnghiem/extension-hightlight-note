@@ -22,6 +22,12 @@ chrome.storage.local.get("settings", ({ settings }) => {
   $("threshold").value = s.defaultThreshold ?? 20;
   $("cooldown").value = Math.round((s.hoverCooldownMs ?? 300000) / 1000);
   $("color").value = s.highlightColor ?? "#ffeb3b";
+  const tcDef = self.HN_CONST.VN_TYPE_COLORS; // dùng chung từ constants.js
+  const tc = s.typeColors || {};
+  $("colorImportant").value = tc.important || tcDef.important;
+  $("colorTodo").value = tc.todo || tcDef.todo;
+  $("colorQuestion").value = tc.question || tcDef.question;
+  $("colorReference").value = tc.reference || tcDef.reference;
   $("highlightStyle").value = s.highlightStyle ?? "underline";
   $("hlThickness").value = s.highlightThickness ?? 2;
   $("caseSensitive").checked = !!s.caseSensitive;
@@ -39,6 +45,7 @@ chrome.storage.local.get("settings", ({ settings }) => {
   $("autoBackup").checked = s.autoBackup !== false;
   if (typeof updateSyncModeHint === "function") updateSyncModeHint();
   updateHlPreview();
+  updateTypePreviews();
 });
 
 // ---------- Xem trước highlight (đồng bộ với màu/kiểu/độ dày đang chọn) ----------
@@ -50,6 +57,25 @@ function contrastTextFor(hex) {
   const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
   return ((r * 299 + g * 587 + b * 114) / 1000) >= 140 ? "#000" : "#fff";
 }
+// Preview trực tiếp cho từng loại: tô mẫu "chữ mẫu" theo màu + kiểu highlight đang chọn,
+// và nhuộm icon loại theo đúng màu → đổi màu là thấy ngay (giống preview của Từ vựng).
+function updateTypePreviews() {
+  const style = $("highlightStyle").value;
+  const thick = parseInt($("hlThickness").value) || 2;
+  [["important", "colorImportant"], ["todo", "colorTodo"], ["question", "colorQuestion"], ["reference", "colorReference"]].forEach(([t, id]) => {
+    const color = $(id).value;
+    const pv = document.querySelector(`.tc-preview[data-type="${t}"]`);
+    if (pv) {
+      pv.style.setProperty("--vocab-color", color);
+      pv.style.setProperty("--vocab-text-color", contrastTextFor(color));
+      pv.style.setProperty("--vocab-thickness", thick + "px");
+      pv.setAttribute("data-vocab-style", style);
+    }
+    const ico = document.querySelector(`.tc-ico[data-type="${t}"]`);
+    if (ico) ico.style.color = color;
+  });
+}
+
 function updateHlPreview() {
   const color = $("color").value;
   const style = $("highlightStyle").value;
@@ -116,6 +142,12 @@ function saveTopSettings() {
       defaultThreshold: Math.max(1, parseInt($("threshold").value) || 20),
       hoverCooldownMs: Math.max(1, parseInt($("cooldown").value) || 300) * 1000,
       highlightColor: $("color").value,
+      typeColors: {
+        important: $("colorImportant").value,
+        todo: $("colorTodo").value,
+        question: $("colorQuestion").value,
+        reference: $("colorReference").value
+      },
       highlightStyle: $("highlightStyle").value,
       highlightThickness: Math.min(5, Math.max(1, parseInt($("hlThickness").value) || 2)),
       caseSensitive: $("caseSensitive").checked,
@@ -146,11 +178,16 @@ function saveTopSettingsDebounced() {
   $(id).addEventListener("change", saveTopSettings));
 $("color").addEventListener("change", saveTopSettings);
 $("color").addEventListener("input", () => { updateHlPreview(); saveTopSettingsDebounced(); }); // kéo bảng màu
+// Màu theo loại: lưu ngay khi chọn, debounce khi kéo bảng màu.
+["colorImportant", "colorTodo", "colorQuestion", "colorReference"].forEach(id => {
+  $(id).addEventListener("change", saveTopSettings);
+  $(id).addEventListener("input", () => { updateTypePreviews(); saveTopSettingsDebounced(); });
+});
 
-// Kiểu highlight → lưu ngay + cập nhật preview.
-$("highlightStyle").addEventListener("change", () => { updateHlPreview(); saveTopSettings(); });
+// Kiểu highlight → lưu ngay + cập nhật preview (cả vocab lẫn từng loại).
+$("highlightStyle").addEventListener("change", () => { updateHlPreview(); updateTypePreviews(); saveTopSettings(); });
 // Độ dày → preview live khi kéo, debounce khi lưu, chốt khi thả.
-$("hlThickness").addEventListener("input", () => { updateHlPreview(); saveTopSettingsDebounced(); });
+$("hlThickness").addEventListener("input", () => { updateHlPreview(); updateTypePreviews(); saveTopSettingsDebounced(); });
 $("hlThickness").addEventListener("change", saveTopSettings);
 
 // Ô số → debounce khi gõ, lưu chốt khi rời ô / Enter.
@@ -435,6 +472,16 @@ $("importFile").onchange = (e) => {
         id: w.id || ioNewId(),
         term: w.term,
         lang: w.lang || ioDetectLang(w.term),
+        type: w.type || "vocab",
+        tags: (Array.isArray(w.tags) && w.tags.length) ? w.tags : undefined,
+        sticky: w.sticky || undefined,
+        stickyPos: w.stickyPos || undefined,
+        stickyCollapsed: w.stickyCollapsed || undefined,
+        anchor: w.anchor || undefined,
+        url: w.url || undefined,
+        pageTitle: w.pageTitle || undefined,
+        anchorPrefix: w.anchorPrefix || undefined,
+        anchorSuffix: w.anchorSuffix || undefined,
         phonetic: w.phonetic || "",
         meaning: w.meaning || "",
         note: w.note || "",
@@ -448,14 +495,21 @@ $("importFile").onchange = (e) => {
       if (replace) {
         words = data.words.map(norm);
       } else {
-        const byTerm = new Map(words.map(w => [w.term.toLowerCase(), w]));
+        const byTerm = new Map(words.filter(w => !w.sticky).map(w => [w.term.toLowerCase(), w]));
+        const ids = new Set(words.map(w => w.id));
         for (const w of data.words) {
+          // Sticky note gắn theo URL → không gộp theo tên; thêm mới nếu chưa có id.
+          if (w.sticky) { if (!ids.has(w.id)) words.push(norm(w)); continue; }
           const k = (w.term || "").toLowerCase();
           if (byTerm.has(k)) {
             const ex = byTerm.get(k);
             ex.hoverCount = Math.max(ex.hoverCount || 0, w.hoverCount || 0);
             if (!ex.meaning && w.meaning) ex.meaning = w.meaning;
             if (!ex.note && w.note) ex.note = w.note;
+            if (Array.isArray(w.tags) && w.tags.length) {
+              const set = new Set([...(ex.tags || []), ...w.tags].map(s => String(s).trim()).filter(Boolean));
+              ex.tags = [...set];
+            }
           } else {
             words.push(norm(w));
           }
