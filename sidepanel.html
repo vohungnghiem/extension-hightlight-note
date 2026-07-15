@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    /* Side Panel là document trình duyệt thật (không phải action-popup) nên gõ
+       tiếng Việt bằng fcitx5/ibus hoạt động bình thường — giải bug IME trên Linux.
+       Ta nhúng lại toàn bộ giao diện popup qua iframe (?panel=1) để dùng chung 100%
+       code, không nhân đôi. Iframe chiếm trọn panel và co giãn theo bề rộng panel. */
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    iframe { display: block; border: 0; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <iframe src="popup.html?panel=1" title="Highlight Note"></iframe>
+</body>
+</html>

@@ -57,6 +57,8 @@ body.window-mode::before {
   border-bottom: 1px solid #f3dca0;
 }
 body.window-mode { width: 100%; height: 100vh; }
+/* Side Panel: lấp đầy chiều rộng/cao panel (user tự kéo giãn). */
+body.panel-mode { width: 100%; height: 100vh; }
 
 body {
   width: 384px;
@@ -539,17 +541,21 @@ body.no-review .launch-secondary { display: none; }
 .site-bar.bl .host { color: var(--danger); }
 
 /* ===== Toolbar ===== */
-.toolbar { display: flex; gap: 8px; padding: 10px 12px; background: var(--surface); border-top: 1px solid var(--line); }
+.toolbar { display: flex; align-items: center; gap: 3px; padding: 8px 10px; background: var(--surface); border-top: 1px solid var(--line); }
 .toolbar button {
-  flex: 1; padding: 9px; background: var(--field); border: 1px solid transparent;
-  border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; color: var(--ink-soft);
+  flex: 0 0 auto; width: 34px; height: 32px; padding: 0;
+  background: transparent; border: 1px solid transparent;
+  border-radius: 9px; cursor: pointer; color: var(--ink-soft);
   transition: background 0.12s, color 0.12s;
 }
 .toolbar button:hover { background: var(--brand-weak); color: var(--brand-ink); }
+.toolbar button:active { transform: translateY(1px); }
 .toolbar .ic-btn { display: flex; align-items: center; justify-content: center; }
 .toolbar .ic-btn svg { width: 18px; height: 18px; display: block; }
 .toolbar .ic-btn.ok { color: var(--ok); background: #ecfdf5; }
-.toolbar button#optionsBtn { flex: 0 0 44px; }
+/* Nhóm các cụm chức năng: gạch ngăn mảnh + khoảng đẩy để Trợ giúp/Cài đặt về phải */
+.toolbar .tb-sep { flex: 0 0 auto; width: 1px; height: 18px; margin: 0 5px; background: var(--line); border-radius: 1px; }
+.toolbar .tb-spacer { flex: 1 1 auto; }
 
 /* ===== Modal ===== */
 .modal-overlay {

@@ -31,6 +31,7 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 | 📊 **Progress** | Mỗi từ có thanh tiến độ riêng: gặp (hover) đủ ngưỡng → tự đánh dấu **đã thuộc** & ngừng tô sáng (không xoá dữ liệu) |
 | 🔁 **Ôn tập giãn cách (SRS)** | Lịch ôn tự giãn (1→3→7→14… ngày) theo mức nhớ; badge số từ **cần ôn hôm nay** trên icon + thanh nhắc trong popup; buổi ôn flashcard chấm điểm Quên/Nhớ/Dễ |
 | 📋 **Bulk add** | Dán cả danh sách `word - nghĩa - ghi chú`, mỗi dòng một từ |
+| 📑 **Side Panel** | Mở toàn bộ giao diện quản lý ở **bảng cạnh trang** (nút ⧉ trong popup hoặc `Alt+Shift+S`): panel đứng yên khi bạn đọc/cuộn, kéo rộng hẹp tuỳ ý và nhập liệu ổn định — thay hẳn workaround cửa sổ riêng trên Linux (IME fcitx5/ibus). |
 | 🚫 **Per-site blacklist** | Tắt highlight ở những site bạn không muốn (Gmail, dashboard nội bộ, ...) |
 | ⬇⬆ **Backup JSON** | Export/Import toàn bộ từ vựng + settings, nhắc backup sau 7 ngày |
 | 📝 **Xuất Markdown** | Xuất toàn bộ mục ra file `.md` (nhóm theo loại; To-do thành checkbox `- [ ]`) — đưa thẳng vào Obsidian / Notion / ghi chú công việc |
@@ -55,6 +56,7 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 | Phím | Hành động |
 |---|---|
 | `Alt + Shift + H` | Lưu từ đang bôi đen |
+| `Alt + Shift + S` | Mở Side Panel (bảng quản lý cạnh trang) |
 | `Ctrl + Shift + Y` | Mở popup Highlight Note |
 
 Đổi phím tắt tại `chrome://extensions/shortcuts`.

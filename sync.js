@@ -12,8 +12,11 @@
   const QUOTA_BYTES = 102400;          // tổng 100KB
   const QUOTA_BYTES_PER_ITEM = 8192;   // 8KB / item
   const MAX_ITEMS = 512;
-  // Mỗi chunk chừa biên cho key + cú pháp JSON, dùng ~7KB payload an toàn.
-  const CHUNK_PAYLOAD = 7000;
+  // QUAN TRỌNG: storage.sync tính quota mỗi item = độ dài JSON.stringify(value) + key,
+  // tức là ĐÃ ESCAPE. JSON từ vựng đầy dấu " (mỗi " → \" gấp đôi byte), nên phải cắt
+  // chunk theo kích thước-đã-escape, không phải byte thô — nếu không sẽ vượt 8192 →
+  // lỗi kQuotaBytesPerItem. Budget 7600 chừa biên cho key ("hn_chunk_NNN") + 2 dấu ngoặc.
+  const CHUNK_ESCAPED_BUDGET = 7600;
   // Ngưỡng chuyển sang Drive: chừa biên dưới 100KB và dưới trần số item.
   const SYNC_SAFE_BYTES = 90000;
 
@@ -100,20 +103,32 @@
     });
   }
 
-  // Cắt chuỗi JSON thành các mảnh <= CHUNK_PAYLOAD byte (cắt theo byte an toàn).
+  // Chi phí byte của 1 ký tự KHI ĐÃ nằm trong chuỗi JSON stringify (tính cả escape).
+  // Đây mới là con số storage.sync dùng để tính quota mỗi item.
+  function jsonCharCost(ch) {
+    if (ch === '"' || ch === "\\") return 2;            // " → \" ; \ → \\
+    const code = ch.charCodeAt(0);
+    if (code < 0x20) {                                   // ký tự điều khiển
+      return (ch === "\b" || ch === "\f" || ch === "\n" || ch === "\r" || ch === "\t") ? 2 : 6; // \uXXXX
+    }
+    return byteLen(ch);
+  }
+
+  // Cắt chuỗi JSON thành các mảnh mà kích thước-đã-escape <= CHUNK_ESCAPED_BUDGET,
+  // đảm bảo mỗi item lưu vào storage.sync không vượt 8192 byte.
   function splitToChunks(jsonStr) {
     const chunks = [];
     let buf = "";
-    let bufBytes = 0;
-    for (const ch of jsonStr) {
-      const cb = byteLen(ch);
-      if (bufBytes + cb > CHUNK_PAYLOAD) {
+    let bufCost = 0;
+    for (const ch of jsonStr) {           // lặp theo code-point (an toàn với emoji)
+      const cc = jsonCharCost(ch);
+      if (bufCost + cc > CHUNK_ESCAPED_BUDGET && buf) {
         chunks.push(buf);
         buf = "";
-        bufBytes = 0;
+        bufCost = 0;
       }
       buf += ch;
-      bufBytes += cb;
+      bufCost += cc;
     }
     if (buf) chunks.push(buf);
     return chunks;

@@ -77,6 +77,12 @@ chrome.commands.onCommand.addListener(async (cmd) => {
   if (cmd === "add-selected-word") {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tab) chrome.tabs.sendMessage(tab.id, { type: "ADD_FROM_SELECTION" });
+  } else if (cmd === "open-side-panel") {
+    // Phím tắt là user-gesture hợp lệ cho sidePanel.open().
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (chrome.sidePanel && tab) await chrome.sidePanel.open({ windowId: tab.windowId });
+    } catch (e) {}
   }
 });
 

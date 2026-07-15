@@ -4,59 +4,151 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy – Highlight Note</title>
+  <script>
+    // Pre-paint: đặt data-theme theo hệ thống ngay để tránh nháy sáng→tối.
+    try {
+      var __dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", __dark ? "dark" : "light");
+    } catch (e) {}
+  </script>
   <style>
-    body { max-width: 760px; margin: 40px auto; padding: 0 20px; font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.65; color: #1f2328; }
-    h1 { font-size: 1.7rem; }
-    h2 { font-size: 1.2rem; margin-top: 2rem; border-bottom: 1px solid #eaecef; padding-bottom: .3rem; }
-    code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
-    .muted { color: #6a737d; font-size: .9rem; }
-    ul { padding-left: 1.3rem; }
-    hr { border: none; border-top: 1px solid #eaecef; margin: 3rem 0; }
+    :root {
+      --brand: #5b56e0;
+      --brand-strong: #4338ca;
+      --brand-weak: #eef0ff;
+      --ink: #1f2230;
+      --ink-soft: #555a6b;
+      --ink-faint: #8b90a0;
+      --bg1: #eef0ff;
+      --bg2: #f6f7fb;
+      --surface: #ffffff;
+      --line: #e8eaf1;
+      --code: #f3f4f6;
+      --radius: 16px;
+      --shadow: 0 10px 30px rgba(20, 22, 40, 0.12);
+    }
+    html[data-theme="dark"] {
+      --brand: #8b87f5;
+      --brand-strong: #a5a1ff;
+      --brand-weak: #262a45;
+      --ink: #e6e7ef;
+      --ink-soft: #adb1c2;
+      --ink-faint: #7b8093;
+      --bg1: #171a2b;
+      --bg2: #12131a;
+      --surface: #1b1d27;
+      --line: #2c2f3e;
+      --code: #23273a;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(165deg, var(--bg1) 0%, var(--bg2) 45%);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 44px 20px;
+      line-height: 1.62;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { width: 100%; max-width: 720px; }
+
+    .hero { text-align: center; margin-bottom: 26px; }
+    .hero img { width: 68px; height: 68px; border-radius: 18px; box-shadow: var(--shadow); }
+    .hero h1 { font-size: 24px; margin-top: 14px; color: var(--brand-strong); letter-spacing: 0.2px; }
+    .hero .muted { color: var(--ink-faint); font-size: 13px; margin-top: 8px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .card h2 {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px;
+      color: var(--ink-faint); font-weight: 800; margin-bottom: 12px;
+    }
+    .card p { margin-bottom: 10px; color: var(--ink-soft); font-size: 14.5px; }
+    .card p:last-child { margin-bottom: 0; }
+    .card p strong { color: var(--ink); }
+    .lang { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+      color: var(--brand-strong); background: var(--brand-weak);
+      border-radius: 5px; padding: 1px 6px; margin-right: 6px; vertical-align: 1px; }
+    ul { padding-left: 1.2rem; margin: 4px 0 10px; }
+    li { color: var(--ink-soft); font-size: 14.5px; margin-bottom: 4px; }
+    code { background: var(--code); padding: 1px 6px; border-radius: 5px; font-size: 0.88em; color: var(--ink); }
+    a { color: var(--brand-strong); font-weight: 600; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .footnote { color: var(--ink-faint); font-size: 13px; text-align: center; margin-top: 14px; }
   </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="hero">
+      <img src="icons/icon128.png" alt="Highlight Note" />
+      <h1>Chính sách quyền riêng tư</h1>
+      <p class="muted">Highlight Note · Last updated July 15, 2026 · Cập nhật 15/07/2026</p>
+    </div>
 
-  <h1>Privacy Policy – Highlight Note</h1>
-  <p class="muted">Last updated: June 6, 2026 · Cập nhật lần cuối: 06/06/2026</p>
+    <div class="card">
+      <h2>1. Overview · Tổng quan</h2>
+      <p><span class="lang">EN</span>Highlight Note ("the extension") lets you highlight words and phrases on web pages, save notes and translations, and review your vocabulary. We respect your privacy and designed the extension to keep your data on your own device.</p>
+      <p><span class="lang">VI</span>Highlight Note ("tiện ích") giúp bạn tô sáng từ và cụm từ trên trang web, lưu ghi chú, bản dịch và ôn lại từ vựng. Chúng tôi tôn trọng quyền riêng tư và thiết kế tiện ích để dữ liệu được lưu ngay trên máy của bạn.</p>
+    </div>
 
-  <h2>1. Overview / Tổng quan</h2>
-  <p><strong>EN:</strong> Highlight Note ("the extension") is a browser extension that lets you highlight words and phrases on web pages, save notes and translations, and review your vocabulary. We respect your privacy and designed the extension to keep your data on your own device.</p>
-  <p><strong>VI:</strong> Highlight Note ("tiện ích") là tiện ích trình duyệt giúp bạn tô sáng từ và cụm từ trên trang web, lưu ghi chú, bản dịch và ôn lại từ vựng. Chúng tôi tôn trọng quyền riêng tư của bạn và thiết kế tiện ích để dữ liệu được lưu ngay trên máy của bạn.</p>
+    <div class="card">
+      <h2>2. Data we store · Dữ liệu lưu trữ</h2>
+      <p><span class="lang">EN</span>The extension stores the following using the browser's storage:</p>
+      <ul>
+        <li>Highlighted words/phrases, notes, translations and phonetics you create.</li>
+        <li>For highlighted paragraphs and page notes, the URL of the page they belong to, so they can be restored when you revisit it.</li>
+        <li>Your settings (highlight color, language, review thresholds, blacklisted sites, etc.).</li>
+      </ul>
+      <p>This data is <strong>never sent to us</strong> and we do not have any server that collects it.</p>
+      <p>By default the extension uses <strong>Chrome Sync</strong> (<code>chrome.storage.sync</code>) so your list follows you across devices where you are signed in to the same Chrome/Google account. This uses Google's own sync infrastructure — <strong>not our servers</strong> — and is subject to Google's privacy policy. You can turn syncing off in <em>Settings → Account sync</em>; everything then stays on your device only.</p>
+      <p><span class="lang">VI</span>Tiện ích lưu qua bộ nhớ trình duyệt: từ/cụm từ đã tô sáng, ghi chú, bản dịch, phiên âm; <strong>địa chỉ (URL) của trang</strong> đối với đoạn văn được tô sáng và ghi chú theo trang (để khôi phục khi bạn quay lại trang đó); và các tùy chọn của bạn. Dữ liệu này <strong>không bao giờ được gửi về cho chúng tôi</strong> và chúng tôi không có máy chủ nào thu thập nó.</p>
+      <p>Mặc định tiện ích dùng <strong>Chrome Sync</strong> (<code>chrome.storage.sync</code>) để danh sách của bạn đồng bộ giữa các máy đăng nhập cùng tài khoản Chrome/Google. Việc này chạy trên hạ tầng đồng bộ của Google — <strong>không phải máy chủ của chúng tôi</strong> — và tuân theo chính sách của Google. Bạn có thể tắt trong <em>Cài đặt → Đồng bộ tài khoản</em>; khi đó mọi dữ liệu chỉ nằm trên máy bạn.</p>
+    </div>
 
-  <h2>2. Data we store / Dữ liệu chúng tôi lưu</h2>
-  <p><strong>EN:</strong> The extension stores the following <em>locally on your device</em> using the browser's storage:</p>
-  <ul>
-    <li>Highlighted words/phrases, notes, translations and phonetics you create.</li>
-    <li>Your settings (highlight color, language, review thresholds, blacklisted sites, etc.).</li>
-  </ul>
-  <p>This data is <strong>never sent to us</strong> and we do not have any server that collects it.</p>
-  <p><strong>VI:</strong> Tiện ích lưu các dữ liệu sau <em>ngay trên máy của bạn</em> qua bộ nhớ của trình duyệt: từ/cụm từ đã tô sáng, ghi chú, bản dịch, phiên âm và các tùy chọn của bạn. Dữ liệu này <strong>không bao giờ được gửi về cho chúng tôi</strong> và chúng tôi không có máy chủ nào thu thập nó.</p>
+    <div class="card">
+      <h2>3. Third-party services · Dịch vụ bên thứ ba</h2>
+      <p><span class="lang">EN</span>To provide translation and pronunciation, the text you choose may be sent to:</p>
+      <ul>
+        <li><strong>Google Translate API</strong> (<code>translate.googleapis.com</code>) — to translate the text you select.</li>
+        <li><strong>Free Dictionary API</strong> (<code>dictionaryapi.dev</code>) — to fetch IPA pronunciation.</li>
+      </ul>
+      <p>Only the specific text you select is sent. We do not send your browsing history or any other content.</p>
+      <p><span class="lang">VI</span>Để cung cấp tính năng dịch và phiên âm, chỉ phần văn bản bạn chọn mới được gửi tới Google Translate API và Free Dictionary API. Chúng tôi không gửi lịch sử duyệt web hay bất kỳ nội dung nào khác.</p>
+    </div>
 
-  <h2>3. Third-party services / Dịch vụ bên thứ ba</h2>
-  <p><strong>EN:</strong> To provide translation and pronunciation features, the text you choose may be sent to:</p>
-  <ul>
-    <li><strong>Google Translate API</strong> (<code>translate.googleapis.com</code>) — to translate the text you select.</li>
-    <li><strong>Free Dictionary API</strong> (<code>dictionaryapi.dev</code>) — to fetch IPA pronunciation.</li>
-  </ul>
-  <p>Only the specific text you select is sent for these features. We do not send your browsing history or any other content.</p>
-  <p><strong>VI:</strong> Để cung cấp tính năng dịch và phiên âm, chỉ phần văn bản bạn chọn mới được gửi tới Google Translate API và Free Dictionary API. Chúng tôi không gửi lịch sử duyệt web hay bất kỳ nội dung nào khác.</p>
+    <div class="card">
+      <h2>4. Google Drive sync (optional) · Đồng bộ Google Drive (tùy chọn)</h2>
+      <p><span class="lang">EN</span>If you choose to sign in with Google, the extension uses the <code>drive.file</code> scope to back up your data to <em>your own</em> Google Drive. We can only access files the extension itself creates, never your other Drive files. You can disconnect at any time. We do not store your Google account credentials.</p>
+      <p><span class="lang">VI</span>Nếu bạn chọn đăng nhập Google, tiện ích dùng quyền <code>drive.file</code> để sao lưu dữ liệu lên Google Drive <em>của chính bạn</em>. Chúng tôi chỉ truy cập được file do tiện ích tạo ra, không truy cập file khác của bạn. Bạn có thể ngắt kết nối bất cứ lúc nào. Chúng tôi không lưu thông tin đăng nhập Google của bạn.</p>
+    </div>
 
-  <h2>4. Google Drive sync (optional) / Đồng bộ Google Drive (tùy chọn)</h2>
-  <p><strong>EN:</strong> If you choose to sign in with Google, the extension uses the <code>drive.file</code> scope to back up your data to <em>your own</em> Google Drive. We can only access files the extension itself creates, never your other Drive files. You can disconnect at any time. We do not store your Google account credentials.</p>
-  <p><strong>VI:</strong> Nếu bạn chọn đăng nhập Google, tiện ích dùng quyền <code>drive.file</code> để sao lưu dữ liệu lên Google Drive <em>của chính bạn</em>. Chúng tôi chỉ truy cập được các file do tiện ích tạo ra, không truy cập file khác của bạn. Bạn có thể ngắt kết nối bất cứ lúc nào. Chúng tôi không lưu thông tin đăng nhập Google của bạn.</p>
+    <div class="card">
+      <h2>5. Data we do NOT collect · Dữ liệu KHÔNG thu thập</h2>
+      <p><span class="lang">EN</span>We do not collect, sell, or transfer personally identifiable information, browsing history, location, financial, health, or authentication data.</p>
+      <p><span class="lang">VI</span>Chúng tôi không thu thập, bán hoặc chuyển giao thông tin định danh cá nhân, lịch sử duyệt web, vị trí, tài chính, sức khỏe hay thông tin đăng nhập.</p>
+    </div>
 
-  <h2>5. Data we do NOT collect / Dữ liệu chúng tôi KHÔNG thu thập</h2>
-  <p>We do not collect, sell, or transfer personally identifiable information, browsing history, location, financial, health, or authentication data. / Chúng tôi không thu thập, bán hoặc chuyển giao thông tin định danh cá nhân, lịch sử duyệt web, vị trí, tài chính, sức khỏe hay thông tin đăng nhập.</p>
+    <div class="card">
+      <h2>6. Data deletion · Xóa dữ liệu</h2>
+      <p><span class="lang">EN</span>All data lives in your browser. You can delete it anytime by clearing the extension's data or uninstalling the extension. Drive backups can be deleted from your Google Drive.</p>
+      <p><span class="lang">VI</span>Toàn bộ dữ liệu nằm trong trình duyệt của bạn. Bạn có thể xóa bất cứ lúc nào bằng cách xóa dữ liệu của tiện ích hoặc gỡ cài đặt. Bản sao lưu trên Drive có thể xóa trực tiếp từ Google Drive của bạn.</p>
+    </div>
 
-  <h2>6. Data deletion / Xóa dữ liệu</h2>
-  <p><strong>EN:</strong> All data lives in your browser. You can delete it anytime by clearing the extension's data or uninstalling the extension. Drive backups can be deleted from your Google Drive.</p>
-  <p><strong>VI:</strong> Toàn bộ dữ liệu nằm trong trình duyệt của bạn. Bạn có thể xóa bất cứ lúc nào bằng cách xóa dữ liệu của tiện ích hoặc gỡ cài đặt. Bản sao lưu trên Drive có thể xóa trực tiếp từ Google Drive của bạn.</p>
+    <div class="card">
+      <h2>7. Contact · Liên hệ</h2>
+      <p>Email: <a href="mailto:vohungnghiem@gmail.com">vohungnghiem@gmail.com</a></p>
+    </div>
 
-  <h2>7. Contact / Liên hệ</h2>
-  <p>Email: <a href="mailto:vohungnghiem@gmail.com">vohungnghiem@gmail.com</a></p>
-
-  <hr>
-  <p class="muted">Highlight Note does not use remote code. This policy may be updated; changes will be posted on this page.</p>
-
+    <p class="footnote">Highlight Note does not use remote code. This policy may be updated; changes will be posted on this page.</p>
+  </div>
 </body>
 </html>

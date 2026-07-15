@@ -247,14 +247,21 @@
     }
     // Đoạn dài hơn HIGHLIGHT_MAX coi là "note" → không tô sáng (giữ highlight gọn & nhanh)
     const highlightable = activeWords.filter(w => w.term.length <= HIGHLIGHT_MAX);
-    // Build variantMap cho EN
+    // Build variantMap cho nhóm chữ Latin (khớp theo ranh giới từ \b).
+    // EN: sinh thêm biến thể (số nhiều, -ed, -ing…). Ngôn ngữ Latin khác (es, fr, de…):
+    // chỉ khớp đúng từ — không áp quy tắc biến đổi kiểu Anh cho sai. JA xử riêng bên dưới.
     const enTokens = new Set();
     for (const w of highlightable) {
+      if (w.lang === "ja") continue;
       if (w.lang === "en") {
         for (const v of enVariants(w.term)) {
           enTokens.add(v);
           if (!variantMap.has(v)) variantMap.set(v, w);
         }
+      } else {
+        const lc = w.term.toLowerCase();
+        enTokens.add(lc);
+        if (!variantMap.has(lc)) variantMap.set(lc, w);
       }
     }
     const en = Array.from(enTokens).sort((a,b) => b.length - a.length).map(escapeRe);
@@ -875,10 +882,12 @@
     const pctBar = Math.min(100, pctRaw); // thanh progress vẫn cap 100% cho khỏi tràn
     const lang = w.lang || detectLang(w.term);
     const type = vnTypeOf(w);
-    const dictUrl = lang === "ja"
-      ? `https://jisho.org/search/${encodeURIComponent(w.term)}`
-      : `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w.term)}`;
-    const dictTitle = lang === "ja" ? "Jisho" : "Cambridge";
+    // Từ điển theo ngôn ngữ: JA→Jisho, EN→Cambridge, còn lại→Wiktionary (đa ngôn ngữ,
+    // tránh trỏ nhầm mọi thứ vào Cambridge English như trước).
+    let dictUrl, dictTitle;
+    if (lang === "ja") { dictUrl = `https://jisho.org/search/${encodeURIComponent(w.term)}`; dictTitle = "Jisho"; }
+    else if (lang === "en") { dictUrl = `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w.term)}`; dictTitle = "Cambridge"; }
+    else { dictUrl = `https://en.wiktionary.org/wiki/${encodeURIComponent(w.term)}`; dictTitle = "Wiktionary"; }
     const trUrl = `https://translate.google.com/?sl=auto&tl=vi&text=${encodeURIComponent(w.term)}`;
     tip.innerHTML = `
       <div class="vn-card">
@@ -1533,6 +1542,7 @@
         // Toast với nút Hoàn tác (giữ 6s)
         showToast(`Đã xoá "${removed.term}"`, {
           duration: 6000,
+          undo: true,
           actions: [{
             label: "↶ Hoàn tác",
             onClick: () => {
@@ -1572,7 +1582,9 @@
     if (settings.showToasts === false) return;
 
     const t = document.createElement("div");
-    t.className = "vocab-note-toast" + (opts.warn ? " vn-warn" : "");
+    // vn-undo: toast cho thao tác xoá (có nút Hoàn tác) → nền trung tính tối thay vì
+    // xanh "thành công", để không nhầm hành động mất dữ liệu với báo thành công.
+    t.className = "vocab-note-toast" + (opts.warn ? " vn-warn" : "") + (opts.undo ? " vn-undo" : "");
 
     const brand = document.createElement("img");
     brand.className = "vn-toast-brand";
@@ -1600,39 +1612,79 @@
   }
 
   // ---------- Lấy phiên âm IPA (dictionaryapi.dev, miễn phí) ----------
+  // Cache theo phiên làm việc + gộp request trùng + lùi thời gian khi bị 429.
+  // dictionaryapi.dev trả 404 với rất nhiều từ (tên riêng, chia động từ…) → nhớ lại
+  // để KHÔNG hỏi lại mỗi lần tô sáng; 429 (rate-limit) → tạm ngừng gọi 60s.
+  const _phoneticCache = new Map();     // term(lc) -> phiên âm ("" = đã tra, không có)
+  const _phoneticInflight = new Map();  // term(lc) -> Promise đang chạy
+  let _phoneticBackoffUntil = 0;        // mốc thời gian được phép gọi lại sau khi 429
   async function fetchPhonetic(term, lang) {
     if (lang !== "en") return ""; // chỉ EN hỗ trợ; JA dùng kana sẵn có
-    try {
-      const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(term)}`;
-      const res = await fetch(url);
-      if (!res.ok) return "";
-      const data = await res.json();
-      if (!Array.isArray(data) || !data[0]) return "";
-      // Ưu tiên trường .phonetic; fallback duyệt mảng .phonetics
-      if (data[0].phonetic) return data[0].phonetic;
-      if (Array.isArray(data[0].phonetics)) {
-        const p = data[0].phonetics.find(x => x && x.text);
-        if (p) return p.text;
-      }
-    } catch (e) {}
-    return "";
+    const key = (term || "").toLowerCase();
+    if (!key) return "";
+    if (_phoneticCache.has(key)) return _phoneticCache.get(key);
+    if (_phoneticInflight.has(key)) return _phoneticInflight.get(key);
+    if (Date.now() < _phoneticBackoffUntil) return ""; // đang bị rate-limit → thử lại sau
+    const p = (async () => {
+      try {
+        const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(term)}`;
+        const res = await fetch(url);
+        if (res.status === 429) { _phoneticBackoffUntil = Date.now() + 60000; return ""; }
+        if (!res.ok) { _phoneticCache.set(key, ""); return ""; } // 404: nhớ là không có
+        const data = await res.json();
+        let found = "";
+        if (Array.isArray(data) && data[0]) {
+          // Ưu tiên trường .phonetic; fallback duyệt mảng .phonetics
+          if (data[0].phonetic) found = data[0].phonetic;
+          else if (Array.isArray(data[0].phonetics)) {
+            const ph = data[0].phonetics.find(x => x && x.text);
+            if (ph) found = ph.text;
+          }
+        }
+        _phoneticCache.set(key, found);
+        return found;
+      } catch (e) { return ""; } // lỗi mạng tạm thời → không cache, cho phép thử lại
+    })();
+    _phoneticInflight.set(key, p);
+    try { return await p; } finally { _phoneticInflight.delete(key); }
   }
 
   // ---------- Auto-translate qua Google Translate (endpoint công khai) ----------
+  // Cache theo phiên + gộp request trùng: mini-card, tooltip và preview khi bôi đen
+  // dùng chung một bộ nhớ, tránh gọi lại Google Translate cho cùng một đoạn (đỡ bị
+  // rate-limit khi bôi đen liên tục / mở lại cùng trang).
+  const _translateCache = new Map();     // text -> bản dịch
+  const _translateInflight = new Map();  // text -> Promise đang chạy
+  const _detectedLang = new Map();       // text -> mã ngôn ngữ Google tự nhận (vd "es", "fr")
+  // Ngôn ngữ nguồn Google đã tự nhận cho đoạn text (rỗng nếu chưa dịch lần nào).
+  function detectedLangOf(text) { return _detectedLang.get((text || "").trim()) || ""; }
   async function autoTranslate(text, srcLang) {
-    try {
-      // sl=auto: để Google tự nhận diện ngôn ngữ nguồn → dịch đúng cả từ Pháp/Đức/
-      // Tây Ban Nha… Trước đây ép sl="en" khiến mọi từ không phải CJK bị coi là
-      // tiếng Anh và dịch sai. (srcLang vẫn dùng cho phát âm/tra từ điển ở nơi khác.)
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(text)}`;
-      const res = await fetch(url);
-      if (!res.ok) return "";
-      const data = await res.json();
-      if (Array.isArray(data) && Array.isArray(data[0])) {
-        return data[0].map(seg => (seg && seg[0]) || "").join("").trim();
-      }
-    } catch (e) {}
-    return "";
+    const key = (text || "").trim();
+    if (!key) return "";
+    if (_translateCache.has(key)) return _translateCache.get(key);
+    if (_translateInflight.has(key)) return _translateInflight.get(key);
+    const p = (async () => {
+      try {
+        // sl=auto: để Google tự nhận diện ngôn ngữ nguồn → dịch đúng cả từ Pháp/Đức/
+        // Tây Ban Nha… Trước đây ép sl="en" khiến mọi từ không phải CJK bị coi là
+        // tiếng Anh và dịch sai. (srcLang vẫn dùng cho phát âm/tra từ điển ở nơi khác.)
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(key)}`;
+        const res = await fetch(url);
+        if (!res.ok) return "";
+        const data = await res.json();
+        if (Array.isArray(data) && Array.isArray(data[0])) {
+          // data[2] = mã ngôn ngữ nguồn Google phát hiện được → lưu để badge/từ điển
+          // hiển thị đúng (thay vì mặc định "en" cho mọi thứ không phải CJK).
+          if (typeof data[2] === "string" && data[2]) _detectedLang.set(key, data[2].toLowerCase());
+          const out = data[0].map(seg => (seg && seg[0]) || "").join("").trim();
+          if (out) _translateCache.set(key, out); // chỉ cache khi dịch được
+          return out;
+        }
+      } catch (e) {}
+      return "";
+    })();
+    _translateInflight.set(key, p);
+    try { return await p; } finally { _translateInflight.delete(key); }
   }
 
   // Đặt mini-card sát selection hiện tại; nếu không có → góc dưới phải.
@@ -1694,7 +1746,9 @@
     // Đóng mini-card cũ nếu có
     document.querySelectorAll(".vocab-note-mini-card").forEach(el => el.remove());
 
-    const lang = detectLang(term);
+    // Ưu tiên ngôn ngữ Google đã nhận (nếu preview lúc bôi đen đã dịch); nếu chưa,
+    // tạm đoán CJK/en rồi sẽ cập nhật lại sau khi dịch xong bên dưới.
+    let lang = detectedLangOf(term) || detectLang(term);
     const typeChips = Object.keys(VN_TYPES).map(t =>
       `<button class="vn-mini-type" data-type="${t}" title="${escapeHtml(VN_TYPES[t].label)}">${VN_TYPE_ICON[t] || VN_TYPES[t].icon}</button>`
     ).join("");
@@ -1792,6 +1846,13 @@
       meaningView.classList.add("vn-mini-empty");
     } else {
       autoTranslate(term, lang).then(translated => {
+        // Google vừa nhận diện ngôn ngữ nguồn → cập nhật badge cho đúng (es/fr/…)
+        const dl = detectedLangOf(term);
+        if (dl && dl !== lang) {
+          lang = dl;
+          const badge = card.querySelector(".vn-mini-lang");
+          if (badge) badge.textContent = lang.toUpperCase();
+        }
         if (isRealTranslation(term, translated)) {
           meaningView.textContent = translated;
           meaningView.classList.remove("vn-mini-empty");

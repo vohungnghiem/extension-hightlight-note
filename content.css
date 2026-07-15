@@ -94,7 +94,7 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   line-height: 1.45;
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.06);
-  width: 280px;
+  width: 320px;
   overflow: hidden;
 }
 /* State: pinned (đã click ghim) */
@@ -106,8 +106,8 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 .vocab-note-tooltip .vn-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 12px 8px;
+  gap: 4px;
+  padding: 10px 10px 8px;
   background: linear-gradient(180deg, #2a2a2a 0%, #1e1e1e 100%);
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
@@ -120,10 +120,11 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 }
 .vocab-note-tooltip .vn-term-text {
   font-weight: 700;
-  font-size: 16px;
+  font-size: 15px;
   color: #fff;
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  margin-right: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -145,8 +146,9 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -358,6 +360,9 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   font-weight: 600;
 }
 .vocab-note-toast.vn-warn button { color: #f57c00; }
+/* Toast xoá (Hoàn tác): nền trung tính tối, nút trắng nổi bật làm điểm nhấn. */
+.vocab-note-toast.vn-undo { background: #2b2f38; }
+.vocab-note-toast.vn-undo button { color: #2b2f38; }
 
 @keyframes vn-slide-in {
   from { transform: translateX(100%); opacity: 0; }

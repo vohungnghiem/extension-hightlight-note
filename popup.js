@@ -112,10 +112,18 @@ function speakTerm(text, lang) {
   } catch (e) {}
 }
 
-// Phân biệt 2 chế độ: popup mặc định vs cửa sổ riêng
+// Phân biệt các chế độ: popup mặc định · cửa sổ riêng (?window=1) · Side Panel (?panel=1).
+// Side Panel là document thật → gõ tiếng Việt (fcitx5/ibus) chạy bình thường, KHÔNG
+// cần workaround cửa sổ riêng và KHÔNG tự đóng như window mode.
 const urlParams = new URLSearchParams(location.search);
 const isWindowMode = urlParams.get("window") === "1";
+const isSidePanel = urlParams.get("panel") === "1";
 const focusTarget = urlParams.get("focus");
+
+// Nhớ windowId hiện tại NGAY khi load để nút mở Side Panel gọi sidePanel.open() được
+// đồng bộ trong user-gesture (await trước lời gọi có thể làm mất tư cách gesture).
+let currentWindowId = null;
+try { chrome.windows.getCurrent(w => { if (w) currentWindowId = w.id; }); } catch (e) {}
 
 // Trong window mode, sau khi lưu xong sẽ tự đóng cửa sổ (tránh window mồ côi)
 function autoCloseIfWindow() {
@@ -1109,10 +1117,22 @@ if ($("helpBtn")) $("helpBtn").onclick = () =>
   chrome.tabs.create({ url: chrome.runtime.getURL("welcome.html") });
 if ($("syncDot")) $("syncDot").onclick = () => chrome.runtime.openOptionsPage();
 
-if (isWindowMode) {
-  $("windowBtn").style.display = "none";
+if (isWindowMode || isSidePanel) {
+  // Trong cửa sổ riêng / side panel: đã gõ được tiếng Việt rồi, ẩn nút mở panel.
+  if ($("windowBtn")) $("windowBtn").style.display = "none";
 } else {
+  // Popup mặc định: nút này giờ mở Side Panel (thay cho cửa sổ riêng cũ) — panel
+  // đứng yên cạnh trang, nhập liệu ổn định (IME). Fallback về cửa sổ riêng nếu
+  // trình duyệt chưa hỗ trợ sidePanel hoặc chưa kịp lấy windowId.
+  $("windowBtn").title = "Mở ở Side Panel";
   $("windowBtn").onclick = () => {
+    if (chrome.sidePanel && currentWindowId != null) {
+      try {
+        chrome.sidePanel.open({ windowId: currentWindowId });
+        window.close();
+        return;
+      } catch (e) {}
+    }
     chrome.runtime.sendMessage({ type: "OPEN_POPUP_WINDOW" });
     window.close();
   };
@@ -1218,6 +1238,10 @@ if (isWindowMode) {
 // Tô đậm window mode để user biết đang ở cửa sổ riêng
 if (isWindowMode) {
   document.body.classList.add("window-mode");
+}
+// Side Panel: bỏ bề rộng cố định để lấp đầy panel (user tự kéo rộng/hẹp).
+if (isSidePanel) {
+  document.body.classList.add("panel-mode");
 }
 
 load(); // load() sẽ tự gọi renderSiteBar() sau khi settings sẵn sàng

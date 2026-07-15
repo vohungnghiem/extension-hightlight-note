@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Highlight Note – Tô sáng, ghi chú & dịch web",
+  "name": "Highlight Note",
   "version": "1.1.0",
   "description": "Tô sáng từ & cụm từ trên mọi trang web, ghi chú, tự dịch và ôn lại — đa ngôn ngữ, lưu cục bộ, không theo dõi.",
   "permissions": [
@@ -10,7 +10,8 @@
     "alarms",
     "identity",
     "downloads",
-    "scripting"
+    "scripting",
+    "sidePanel"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -28,6 +29,9 @@
     "default_popup": "popup.html",
     "default_title": "Highlight Note"
   },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
   "options_page": "options.html",
   "commands": {
     "add-selected-word": {
@@ -35,6 +39,12 @@
         "default": "Alt+Shift+H"
       },
       "description": "Tô sáng & lưu phần đang bôi đen vào Highlight Note"
+    },
+    "open-side-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Mở Highlight Note ở Side Panel"
     },
     "_execute_action": {
       "suggested_key": {
