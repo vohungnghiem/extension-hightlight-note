@@ -1,3 +1,6 @@
 
 # Private key cho extension (KHÔNG commit, KHÔNG chia sẻ)
 extension-private-key.pem
+
+# Private signing key - KHÔNG commit, KHÔNG chia sẻ
+highlight-note-key.pem

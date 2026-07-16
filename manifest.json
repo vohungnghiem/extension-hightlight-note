@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0koKbln9viFewr3fftFe8GfiD7uvgfDxdwrMbE1tYddLTKun6dveNmXtiq6NF1K2eCw1p7YjeTlG6mSZkth4xI6OEmt7oUoQ/lxfzzxEeJ7aU6jVOowWd7yx8IeYcq4npKBb5uHE8khMf6S8V4h4bJyemVKN/oANPOgI4cxGM3vCsIt5NJu2wvuMmQ6AqR5qLQcxZ+1DuK3+psljy3n3r9jd4mFnk8Om4erUIn0OE9Eojvu0AkBmhkKgmF/o+KJvELAEU2qfoOS5BkrkFLJ5Niv0YbiI356z0Qc0paG8vW6hFcw7Di8FYsL/u/BBJc7maoOBPm8fZmgsdFNVuEChQQIDAQAB",
   "name": "Highlight Note",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Tô sáng từ & cụm từ trên mọi trang web, ghi chú, tự dịch và ôn lại — đa ngôn ngữ, lưu cục bộ, không theo dõi.",
   "permissions": [
     "storage",
@@ -17,7 +18,7 @@
     "<all_urls>"
   ],
   "oauth2": {
-    "client_id": "53595916112-gffs5nu8jfiiidd3ipvhcgikf4sf84ha.apps.googleusercontent.com",
+    "client_id": "53595916112-9a2shv02h83ue53q5mpft1hkc81oeb3s.apps.googleusercontent.com",
     "scopes": [
       "https://www.googleapis.com/auth/drive.file"
     ]

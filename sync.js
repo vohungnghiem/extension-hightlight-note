@@ -198,31 +198,101 @@
 
   // ---------- Tier 2: Google Drive (appDataFolder) ----------
 
+  // Nơi cache access_token của launchWebAuthFlow (API này KHÔNG tự cache như getAuthToken).
+  const TOKEN_STORE_KEY = "hn_drive_token";
+
+  function getOAuthConfig() {
+    const m = chrome.runtime.getManifest();
+    const o = (m && m.oauth2) || {};
+    return {
+      clientId: o.client_id || "",
+      scopes: Array.isArray(o.scopes) && o.scopes.length
+        ? o.scopes
+        : ["https://www.googleapis.com/auth/drive.file"]
+    };
+  }
+
   function isDriveConfigured() {
     try {
-      const m = chrome.runtime.getManifest();
-      return !!(m.oauth2 && m.oauth2.client_id && !/<.*>/.test(m.oauth2.client_id));
+      const { clientId } = getOAuthConfig();
+      return !!(clientId && !/<.*>/.test(clientId));
     } catch (e) { return false; }
   }
 
-  function getAuthToken(interactive) {
+  function getStoredToken() {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage.local.get(TOKEN_STORE_KEY, (r) => resolve((r && r[TOKEN_STORE_KEY]) || null));
+      } catch (e) { resolve(null); }
+    });
+  }
+  function setStoredToken(obj) {
+    return new Promise((resolve) => {
+      try { chrome.storage.local.set({ [TOKEN_STORE_KEY]: obj }, () => resolve()); }
+      catch (e) { resolve(); }
+    });
+  }
+  function clearStoredToken() {
+    return new Promise((resolve) => {
+      try { chrome.storage.local.remove(TOKEN_STORE_KEY, () => resolve()); }
+      catch (e) { resolve(); }
+    });
+  }
+
+  // launchWebAuthFlow: KHÔNG phụ thuộc Item ID. Chỉ cần OAuth client loại "Web application"
+  // khai redirect URI = chrome.identity.getRedirectURL() (dạng https://<extId>.chromiumapp.org/).
+  function launchInteractiveAuth() {
     return new Promise((resolve, reject) => {
-      if (!chrome.identity || !chrome.identity.getAuthToken) {
+      if (!chrome.identity || !chrome.identity.launchWebAuthFlow) {
         return reject(new Error("identity API không khả dụng"));
       }
-      chrome.identity.getAuthToken({ interactive: !!interactive }, (token) => {
+      const { clientId, scopes } = getOAuthConfig();
+      if (!clientId) return reject(new Error("Chưa cấu hình OAuth client_id trong manifest"));
+
+      const redirectUri = chrome.identity.getRedirectURL();
+      const authUrl = "https://accounts.google.com/o/oauth2/auth"
+        + "?client_id=" + encodeURIComponent(clientId)
+        + "&response_type=token"
+        + "&redirect_uri=" + encodeURIComponent(redirectUri)
+        + "&scope=" + encodeURIComponent(scopes.join(" "))
+        + "&prompt=consent";
+
+      chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (redirectUrl) => {
         const e = chrome.runtime.lastError;
-        if (e || !token) return reject(new Error(e ? e.message : "Không lấy được token"));
-        resolve(token);
+        if (e || !redirectUrl) {
+          return reject(new Error(e ? e.message : "Đăng nhập bị huỷ"));
+        }
+        // Token trả về ở phần fragment (#) của redirect URL.
+        const frag = redirectUrl.split("#")[1] || redirectUrl.split("?")[1] || "";
+        const params = new URLSearchParams(frag);
+        if (params.get("error")) {
+          return reject(new Error("Google từ chối: " + params.get("error")));
+        }
+        const token = params.get("access_token");
+        if (!token) return reject(new Error("Không nhận được access_token"));
+        const expiresIn = parseInt(params.get("expires_in") || "3600", 10);
+        resolve({ token, expiresAt: Date.now() + (expiresIn - 60) * 1000 });
       });
     });
   }
 
-  function removeCachedToken(token) {
-    return new Promise((resolve) => {
-      try { chrome.identity.removeCachedAuthToken({ token }, () => resolve()); }
-      catch (e) { resolve(); }
-    });
+  // Giữ nguyên chữ ký getAuthToken(interactive) để background.js không phải đổi.
+  async function getAuthToken(interactive) {
+    const cached = await getStoredToken();
+    if (cached && cached.token && cached.expiresAt && cached.expiresAt > Date.now()) {
+      return cached.token;
+    }
+    if (!interactive) {
+      // Im lặng: chưa có token còn hạn → coi như chưa kết nối.
+      throw new Error("Không lấy được token");
+    }
+    const fresh = await launchInteractiveAuth();
+    await setStoredToken(fresh);
+    return fresh.token;
+  }
+
+  async function removeCachedToken(token) {
+    await clearStoredToken();
   }
 
   // Thu hồi quyền trên phía Google (đăng xuất hẳn khỏi app).

@@ -23,7 +23,9 @@ if (protectBtn) {
           protectBtn.disabled = false;
           if (chrome.runtime.lastError || !r || !r.ok) {
             protectMsg.style.color = "#b91c1c";
-            protectMsg.textContent = "✕ Chưa kết nối được. Bạn có thể thử lại trong Cài đặt.";
+            const detail = (chrome.runtime.lastError && chrome.runtime.lastError.message)
+              || (r && r.error) || "không rõ nguyên nhân";
+            protectMsg.textContent = "✕ Chưa kết nối được: " + detail;
           } else {
             protectMsg.style.color = "#15803d";
             protectMsg.textContent = "✓ Đã kết nối Google Drive — dữ liệu của bạn giờ an toàn!";
