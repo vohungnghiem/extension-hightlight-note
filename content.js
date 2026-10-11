@@ -27,6 +27,7 @@
     if (stickyLayer && stickyLayer.parentNode) stickyLayer.remove();
     stickyLayer = null;
     document.querySelectorAll(".vocab-note-mini-card").forEach(el => el.remove());
+    try { observer.disconnect(); } catch (e) {} // instance cũ thôi quét DOM
   });
 
   // Bộ icon SVG dùng chung (đồng bộ với popup) — thay cho emoji rời rạc
@@ -43,6 +44,9 @@
     learn: svgIco('<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1 2.7 3 6 3s6-2 6-3v-5"/>'),
     del: svgIco('<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'),
     save: svgIco('<polyline points="20 6 9 17 4 12"/>'),
+    minimize: svgIco('<line x1="5" y1="12" x2="19" y2="12"/>'),
+    translate: svgIco('<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>'),
+    highlighter: svgIco('<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>'),
     copy: svgIco('<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
     help: svgIco('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
     gear: svgIco('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>')
@@ -65,6 +69,7 @@
   // VN_TYPES & VN_TYPE_COLORS nạp từ constants.js (chạy trước content.js theo manifest).
   const VN_TYPES = self.HN_CONST.VN_TYPES;
   const VN_TYPE_COLORS = self.HN_CONST.VN_TYPE_COLORS;
+  const { detectLang, isVietnamese, speak } = self.HN_CONST;
   const vnTypeOf = (w) => (w && VN_TYPES[w.type]) ? w.type : "vocab";
   // Nhãn "hoàn tất" theo ngữ cảnh loại (vocab: đã thuộc; todo: đã xong; khác: đã xử lý)
   const vnDoneLabel = (w) => {
@@ -81,19 +86,6 @@
   // gọi trực tiếp được openOptionsPage / chrome.tabs).
   function openExtPage(which) {
     try { chrome.runtime.sendMessage({ type: which === "welcome" ? "OPEN_WELCOME" : "OPEN_OPTIONS" }); } catch (e) {}
-  }
-
-  // Đã ghim icon lên thanh công cụ chưa? Nếu rồi thì người dùng mở popup dễ →
-  // KHÔNG cần nút "Hướng dẫn" trong trang. Hỏi background (content script không
-  // gọi được chrome.action). Mặc định coi như chưa ghim để vẫn hiện lối tắt.
-  let actionPinned = false;
-  function refreshPinnedState() {
-    try {
-      chrome.runtime.sendMessage({ type: "GET_ACTION_PINNED" }, (res) => {
-        if (chrome.runtime.lastError || !res) return;
-        actionPinned = !!res.pinned;
-      });
-    } catch (e) {}
   }
 
   // Icon thương hiệu — gắn vào tooltip & toast để người dùng nhận ra đây là của
@@ -120,6 +112,9 @@
     showSelSpeak: true       // nút Phát âm trên thanh nổi
   };
   let wordMap = new Map(); // termLower -> word object
+  // Chế độ học từ đang bật (và có từ vựng) → mới hiện thanh tiến độ "1/20" và nút
+  // "Đã thuộc" cho từ vựng. Tắt = im hẳn, cùng luật với nút Ôn tập / số trên biểu tượng.
+  let learningOn = false;
   let variantMap = new Map(); // variantLower -> word object (cho stem matching EN)
   let combinedRegex = null;
 
@@ -160,8 +155,12 @@
     return Array.from(set);
   }
 
+  // Khoá tra cứu: gộp khoảng trắng/xuống dòng + chữ thường. Mục bôi đen qua 2 dòng
+  // ("deadline\n dự án") và chữ trên trang ("deadline dự án") phải ra cùng một khoá.
+  function keyOf(text) { return String(text || "").replace(/\s+/g, " ").trim().toLowerCase(); }
+
   function findWordByText(text) {
-    const lc = text.toLowerCase();
+    const lc = keyOf(text);
     return wordMap.get(lc) || variantMap.get(lc) || null;
   }
 
@@ -171,7 +170,6 @@
       words = data.words || [];
       settings = { ...settings, ...(data.settings || {}) };
       rebuildIndex();
-      refreshPinnedState(); // biết đã ghim chưa để quyết định hiện nút Hướng dẫn
       cb && cb();
     });
   }
@@ -192,9 +190,14 @@
     });
   }
 
-  function detectLang(s) {
-    return /[぀-ゟ゠-ヿ一-鿿]/.test(s) ? "ja" : "en";
+  // Mục cũ chữ Việt từng bị gán "en" (detectLang cũ) → coi là "vi" để không sinh
+  // biến thể kiểu Anh và phát âm đúng giọng.
+  function effLang(w) {
+    const l = w.lang || detectLang(w.term);
+    return (l === "en" && isVietnamese(w.term)) ? "vi" : l;
   }
+  // Chữ viết không dùng khoảng trắng giữa các từ (Hán/Kana/Thái) → không áp ranh giới từ.
+  const NOSPACE_SCRIPT = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\u0e00-\u0e7f]/;
   function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
   // Chọn màu chữ đen/trắng dựa trên độ sáng background (Y trong YIQ)
@@ -229,6 +232,7 @@
 
   function rebuildIndex() {
     applyHighlightVars();
+    learningOn = self.HN_CONST.reviewState(words, settings).eligible;
     wordMap.clear();
     variantMap.clear();
     for (const w of words) {
@@ -238,7 +242,7 @@
       // Sticky note (ghi chú dán theo URL) KHÔNG tô sáng chữ trên trang → không đưa
       // vào wordMap/regex; nó được vẽ riêng bởi module renderStickyNotes bên dưới.
       if (w.sticky) continue;
-      wordMap.set(w.term.toLowerCase(), w);
+      wordMap.set(keyOf(w.term), w);
     }
     const activeWords = settings.enabled === false ? [] : words.filter(w => !w.disabled && !w.learned && !w.sticky);
     if (activeWords.length === 0) {
@@ -247,42 +251,54 @@
     }
     // Đoạn dài hơn HIGHLIGHT_MAX coi là "note" → không tô sáng (giữ highlight gọn & nhanh)
     const highlightable = activeWords.filter(w => w.term.length <= HIGHLIGHT_MAX);
-    // Build variantMap cho nhóm chữ Latin (khớp theo ranh giới từ \b).
-    // EN: sinh thêm biến thể (số nhiều, -ed, -ing…). Ngôn ngữ Latin khác (es, fr, de…):
-    // chỉ khớp đúng từ — không áp quy tắc biến đổi kiểu Anh cho sai. JA xử riêng bên dưới.
+    // Build variantMap cho nhóm chữ có khoảng trắng (khớp theo ranh giới từ Unicode).
+    // EN: sinh thêm biến thể (số nhiều, -ed, -ing…). Ngôn ngữ khác (vi, es, fr, de…):
+    // chỉ khớp đúng từ — không áp quy tắc biến đổi kiểu Anh cho sai. CJK xử riêng bên dưới.
     const enTokens = new Set();
     for (const w of highlightable) {
-      if (w.lang === "ja") continue;
-      if (w.lang === "en") {
-        for (const v of enVariants(w.term)) {
+      if (NOSPACE_SCRIPT.test(w.term)) continue;
+      if (effLang(w) === "en") {
+        for (const v of enVariants(keyOf(w.term))) {
           enTokens.add(v);
           if (!variantMap.has(v)) variantMap.set(v, w);
         }
       } else {
-        const lc = w.term.toLowerCase();
+        const lc = keyOf(w.term);
         enTokens.add(lc);
         if (!variantMap.has(lc)) variantMap.set(lc, w);
       }
     }
-    const en = Array.from(enTokens).sort((a,b) => b.length - a.length).map(escapeRe);
-    const ja = highlightable.filter(w => w.lang === "ja").map(w => w.term).sort((a,b) => b.length - a.length).map(escapeRe);
+    // Khoảng trắng trong cụm từ khớp được cả nhiều space / xuống dòng trên trang.
+    const toPattern = (t) => escapeRe(t).replace(/\s+/g, "\\s+");
+    const en = Array.from(enTokens).sort((a,b) => b.length - a.length).map(toPattern);
+    const ja = highlightable.filter(w => NOSPACE_SCRIPT.test(w.term)).map(w => w.term).sort((a,b) => b.length - a.length).map(toPattern);
     const parts = [];
-    if (en.length) parts.push(`\\b(?:${en.join("|")})\\b`);
+    // Ranh giới từ theo Unicode: \b cũ chỉ hiểu [A-Za-z0-9_] nên từ bắt đầu/kết thúc
+    // bằng chữ có dấu ("ở đây", "été", "niño") không bao giờ khớp.
+    const W = "[\\p{L}\\p{M}\\p{N}_]";
+    if (en.length) parts.push(`(?<!${W})(?:${en.join("|")})(?!${W})`);
     if (ja.length) parts.push(`(?:${ja.join("|")})`); // CJK không có word boundary
     if (parts.length === 0) { combinedRegex = null; return; }
-    const flags = settings.caseSensitive ? "g" : "gi";
+    const flags = settings.caseSensitive ? "gu" : "giu";
     combinedRegex = new RegExp(parts.join("|"), flags);
   }
 
   // ---------- Highlight DOM ----------
-  const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "NOSCRIPT", "CODE", "PRE"]);
+  const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "NOSCRIPT", "CODE", "PRE", "SELECT", "OPTION"]);
+  const SVG_NS = "http://www.w3.org/2000/svg";
 
-  const SKIP_CLASSES = ["vocab-note-highlight", "vocab-note-tooltip", "vocab-note-toast", "vocab-note-modal-overlay"];
+  // Không tô sáng bên trong UI của chính extension (sticky note, mini-card, thanh
+  // nổi, toast…) — trước đây chữ trong ghi chú dán trang bị bọc span lung tung.
+  const SKIP_CLASSES = [
+    "vocab-note-highlight", "vocab-note-tooltip", "vocab-note-toast", "vocab-note-toast-stack",
+    "vocab-note-modal-overlay", "vocab-note-mini-card", "vocab-note-sel-btn", "vocab-note-sticky-layer"
+  ];
   function shouldSkip(node) {
     let p = node.parentNode;
     while (p) {
       if (p.nodeType === 1) {
         if (SKIP_TAGS.has(p.tagName)) return true;
+        if (p.namespaceURI === SVG_NS) return true; // chèn <span> vào SVG làm vỡ hình
         if (p.classList) {
           for (const c of SKIP_CLASSES) if (p.classList.contains(c)) return true;
         }
@@ -317,10 +333,10 @@
       }
       const span = document.createElement("span");
       span.className = "vocab-note-highlight";
-      span.dataset.term = wRef.term.toLowerCase();
+      span.dataset.term = keyOf(wRef.term);
       span.dataset.vnType = vnTypeOf(wRef);
       const pct = (wRef.hoverCount || 0) / (wRef.autoDeleteAt || 20);
-      span.dataset.level = pct >= 0.7 ? "hot" : pct >= 0.3 ? "warm" : "new";
+      span.dataset.level = !learningOn ? "new" : pct >= 0.7 ? "hot" : pct >= 0.3 ? "warm" : "new";
       // A11y: screen-reader vẫn đọc được qua role + aria-label. KHÔNG đặt
       // tabindex=0 để tránh tạo hàng trăm điểm dừng Tab trên trang có nhiều từ
       // trùng (gây rối cho người dùng bàn phím). Vẫn focus được bằng JS khi cần.
@@ -488,11 +504,11 @@
   function makeAnchorSpan(w) {
     const span = document.createElement("span");
     span.className = "vocab-note-highlight";
-    span.dataset.term = w.term.toLowerCase();
+    span.dataset.term = keyOf(w.term);
     span.dataset.vnType = vnTypeOf(w);
     span.dataset.anchorId = w.id;
     const pct = (w.hoverCount || 0) / (w.autoDeleteAt || 20);
-    span.dataset.level = pct >= 0.7 ? "hot" : pct >= 0.3 ? "warm" : "new";
+    span.dataset.level = !learningOn ? "new" : pct >= 0.7 ? "hot" : pct >= 0.3 ? "warm" : "new";
     span.tabIndex = -1;
     span.setAttribute("role", "button");
     span.setAttribute("aria-label", w.meaning ? `${w.term} — ${w.meaning}` : `${w.term} (Highlight Note)`);
@@ -573,13 +589,14 @@
     return stickyLayer;
   }
 
-  // Vị trí mặc định: xếp so le ở góc phải-dưới để nhiều note không chồng khít.
+  // Vị trí mặc định: xếp so le ở góc phải-TRÊN (góc dưới phải là chỗ của toast —
+  // trước đây toast "Đã ghim" che mất chính thẻ vừa tạo).
   function stickyDefaultPos(i) {
-    const w = 260, h = 130, gap = 26;
-    let left = window.innerWidth - w - 20 - (i * gap);
-    let top = window.innerHeight - h - 20 - (i * gap);
+    const w = 260, gap = 26;
+    let left = window.innerWidth - w - 24 - (i * gap);
+    let top = 72 + (i * gap);
     if (left < 12) left = 12 + ((i * gap) % 160);
-    if (top < 12) top = 12 + ((i * gap) % 160);
+    if (top > window.innerHeight - 160) top = 12 + ((i * gap) % 160);
     return { left, top };
   }
 
@@ -617,9 +634,9 @@
       <div class="vns-head">
         <img class="vns-brand" src="${BRAND_ICON}" alt="" draggable="false" />
         <span class="vns-title">Ghi chú trang</span>
-        <button class="vns-btn vns-collapse" title="Thu gọn">${VN_ICON.close}</button>
-        <button class="vns-btn vns-edit" title="Sửa">${VN_ICON.edit}</button>
-        <button class="vns-btn vns-del" title="Xoá ghi chú">${VN_ICON.del}</button>
+        <button class="vns-btn vns-collapse" title="Thu gọn thành ghim nhỏ" aria-label="Thu gọn">${VN_ICON.minimize}</button>
+        <button class="vns-btn vns-edit" title="Sửa" aria-label="Sửa">${VN_ICON.edit}</button>
+        <button class="vns-btn vns-del" title="Xoá ghi chú (có thể hoàn tác)" aria-label="Xoá">${VN_ICON.del}</button>
       </div>
       <div class="vns-view"><div class="vns-text"></div></div>
       <div class="vns-editwrap">
@@ -877,63 +894,70 @@
     const w = wordMap.get(term);
     if (!w) return;
     const tip = ensureTooltip();
-    const pctRaw = Math.round((w.hoverCount / w.autoDeleteAt) * 100);
-    const pct = pctRaw;
-    const pctBar = Math.min(100, pctRaw); // thanh progress vẫn cap 100% cho khỏi tràn
-    const lang = w.lang || detectLang(w.term);
+    const threshold = w.autoDeleteAt || 20;
+    const seen = w.hoverCount || 0;
+    const pctBar = Math.min(100, Math.round((seen / threshold) * 100));
+    const lang = effLang(w);
     const type = vnTypeOf(w);
-    // Từ điển theo ngôn ngữ: JA→Jisho, EN→Cambridge, còn lại→Wiktionary (đa ngôn ngữ,
-    // tránh trỏ nhầm mọi thứ vào Cambridge English như trước).
+    const isVocab = type === "vocab";
+    // Từ điển theo ngôn ngữ: JA→Jisho, EN→Cambridge, còn lại→Wiktionary.
     let dictUrl, dictTitle;
-    if (lang === "ja") { dictUrl = `https://jisho.org/search/${encodeURIComponent(w.term)}`; dictTitle = "Jisho"; }
-    else if (lang === "en") { dictUrl = `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w.term)}`; dictTitle = "Cambridge"; }
-    else { dictUrl = `https://en.wiktionary.org/wiki/${encodeURIComponent(w.term)}`; dictTitle = "Wiktionary"; }
+    if (lang === "ja") { dictUrl = `https://jisho.org/search/${encodeURIComponent(w.term)}`; dictTitle = "Tra Jisho"; }
+    else if (lang === "en") { dictUrl = `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(w.term)}`; dictTitle = "Tra Cambridge"; }
+    else { dictUrl = `https://en.wiktionary.org/wiki/${encodeURIComponent(w.term)}`; dictTitle = "Tra Wiktionary"; }
     const trUrl = `https://translate.google.com/?sl=auto&tl=vi&text=${encodeURIComponent(w.term)}`;
+    // Phát âm / tra từ điển chỉ có ý nghĩa với từ vựng; Google Dịch hữu ích với
+    // mọi mục chữ nước ngoài. Mục chữ Việt (việc cần làm, ghi chú…) → header gọn.
+    const foreign = lang !== "vi";
+    const headBtns =
+      (isVocab ? `<button class="vn-icon-btn vn-speak" title="Phát âm" aria-label="Phát âm">${VN_ICON.speak}</button>` : "") +
+      (isVocab ? `<a class="vn-icon-btn" href="${dictUrl}" target="_blank" rel="noopener" title="${dictTitle}" aria-label="${dictTitle}">${VN_ICON.book}</a>` : "") +
+      (foreign ? `<a class="vn-icon-btn" href="${trUrl}" target="_blank" rel="noopener" title="Mở Google Dịch" aria-label="Mở Google Dịch">${VN_ICON.globe}</a>` : "");
+    const doneShort = isVocab ? "Đã thuộc" : type === "todo" ? "Xong" : "Đã xử lý";
     tip.innerHTML = `
-      <div class="vn-card">
+      <div class="vn-card" data-vn-type="${type}">
         <div class="vn-head">
           <img class="vn-brand" src="${BRAND_ICON}" alt="" draggable="false" />
-          <span class="vn-term-text">${escapeHtml(w.term)}</span>
-          <span class="vn-lang">${lang.toUpperCase()}</span>
-          <button class="vn-icon-btn vn-speak" title="Phát âm">${VN_ICON.speak}</button>
-          <a class="vn-icon-btn vn-dict" href="${dictUrl}" target="_blank" title="${dictTitle}">${VN_ICON.book}</a>
-          <a class="vn-icon-btn vn-dict" href="${trUrl}" target="_blank" title="Google Translate">${VN_ICON.globe}</a>
-          ${actionPinned ? "" : `<button class="vn-icon-btn vn-guide" title="Hướng dẫn sử dụng">${VN_ICON.help}</button>`}
-          <button class="vn-icon-btn vn-settings" title="Cài đặt">${VN_ICON.gear}</button>
-          <button class="vn-icon-btn vn-close" title="Đóng">${VN_ICON.close}</button>
+          <span class="vn-term-text" title="${escapeHtml(w.term)}">${escapeHtml(w.term)}</span>
+          ${foreign ? `<span class="vn-lang">${escapeHtml(lang.toUpperCase())}</span>` : ""}
+          ${headBtns}
+          <button class="vn-icon-btn vn-close" title="Đóng (Esc)" aria-label="Đóng">${VN_ICON.close}</button>
         </div>
         <div class="vn-body">
-          <div class="vn-type-row"><span class="vn-type-chip" data-vn-type="${type}">${VN_TYPE_ICON[type] || VN_TYPES[type].icon} ${escapeHtml(VN_TYPES[type].label)}</span></div>
+          ${isVocab ? "" : `<div class="vn-type-row"><span class="vn-type-chip" data-vn-type="${type}">${VN_TYPE_ICON[type] || VN_TYPES[type].icon} ${escapeHtml(VN_TYPES[type].label)}</span></div>`}
           ${w.phonetic ? `<div class="vn-phonetic">${escapeHtml(w.phonetic)}</div>` : ""}
-          ${w.meaning ? `<div class="vn-meaning">${escapeHtml(w.meaning)}</div>` : `<div class="vn-meaning" style="opacity:.5">(chưa có nghĩa)</div>`}
+          ${w.meaning ? `<div class="vn-meaning">${escapeHtml(w.meaning)}</div>` : `<button class="vn-meaning vn-meaning-empty">＋ Thêm nghĩa / ghi chú</button>`}
           ${w.note ? `<div class="vn-note">${escapeHtml(w.note)}</div>` : ""}
           ${(w.tags && w.tags.length) ? `<div class="vn-tags">${w.tags.map(t => `<span class="vn-tag">#${escapeHtml(t)}</span>`).join("")}</div>` : ""}
         </div>
-        <div class="vn-meta">
+        ${isVocab && learningOn ? `
+        <div class="vn-meta" title="Đã gặp ${seen} lần — gặp đủ ${threshold} lần sẽ tự đánh dấu đã thuộc">
           <div class="vn-progress"><div style="width:${pctBar}%"></div></div>
-        </div>
+          <span class="vn-seen">${seen}/${threshold}</span>
+        </div>` : ""}
         <div class="vn-actions">
-          <button class="vn-action vn-edit" title="Sửa nghĩa/ghi chú">${VN_ICON.edit}</button>
-          <button class="vn-action vn-mute" title="${w.disabled ? "Bật lại tô sáng" : "Tạm ẩn tô sáng (vẫn giữ trong danh sách)"}">${w.disabled ? VN_ICON.bellOff : VN_ICON.bell}</button>
-          <button class="vn-action vn-learn" title="Đánh dấu ${vnDoneLabel(w)} (giữ mục, ngừng tô sáng)">${VN_ICON.learn}</button>
-          <button class="vn-action vn-danger vn-delete" title="Xoá hẳn">${VN_ICON.del}</button>
+          <button class="vn-action vn-edit" title="Sửa nghĩa, ghi chú, tag">${VN_ICON.edit}<span>Sửa</span></button>
+          <button class="vn-action vn-mute" title="${w.disabled ? "Bật lại tô sáng" : "Tạm ẩn tô sáng (vẫn giữ trong danh sách)"}">${w.disabled ? VN_ICON.bellOff : VN_ICON.bell}<span>${w.disabled ? "Hiện lại" : "Tạm ẩn"}</span></button>
+          ${!isVocab || learningOn ? `<button class="vn-action vn-learn" title="Đánh dấu ${vnDoneLabel(w)} (giữ mục, ngừng tô sáng)">${VN_ICON.learn}<span>${doneShort}</span></button>` : ""}
+          <button class="vn-action vn-danger vn-delete" title="Xoá hẳn (có thể hoàn tác)">${VN_ICON.del}<span>Xoá</span></button>
         </div>
         <div class="vn-edit-area" style="display:none">
-          <input type="text" class="vn-edit-meaning" placeholder="Nghĩa" value="${escapeHtml(w.meaning || "")}" />
-          <input type="text" class="vn-edit-note" placeholder="Ghi chú" value="${escapeHtml(w.note || "")}" />
-          <input type="text" class="vn-edit-tags" placeholder="Tag (cách nhau bởi dấu phẩy)" value="${escapeHtml(vnTagsToStr(w.tags))}" />
+          <textarea class="vn-edit-meaning" rows="2" placeholder="Nghĩa / mô tả">${escapeHtml(w.meaning || "")}</textarea>
+          <input type="text" class="vn-edit-note" placeholder="Ghi chú (tuỳ chọn)" value="${escapeHtml(w.note || "")}" />
+          <input type="text" class="vn-edit-tags" placeholder="Tag, cách nhau bởi dấu phẩy" value="${escapeHtml(vnTagsToStr(w.tags))}" />
           <div class="vn-edit-actions">
-            <button class="vn-action vn-edit-cancel">Hủy</button>
+            <span class="vn-kbd-hint">Enter lưu · Esc huỷ</span>
+            <button class="vn-action vn-edit-cancel">Huỷ</button>
             <button class="vn-action vn-edit-save">${VN_ICON.save} Lưu</button>
           </div>
         </div>
-        <div class="vn-hint">Click vào từ để ghim · ESC để đóng</div>
+        <div class="vn-hint">Bấm vào chữ để giữ thẻ này · Esc để đóng</div>
       </div>
     `;
     tip.classList.toggle("pinned", pinned);
 
     // Backfill phiên âm cho từ EN cũ chưa có — atomic, không ghi đè
-    if (lang === "en" && !w.phonetic && !w._phoneticFetching) {
+    if (isVocab && lang === "en" && !w.phonetic && !w._phoneticFetching) {
       w._phoneticFetching = true;
       fetchPhonetic(w.term, "en").then(p => {
         delete w._phoneticFetching;
@@ -949,11 +973,9 @@
     }
 
     const stop = (e) => e.stopPropagation();
-    tip.querySelector(".vn-speak").addEventListener("click", (e) => { stop(e); speak(w.term, lang === "ja" ? "ja-JP" : "en-US"); });
+    const speakBtn = tip.querySelector(".vn-speak");
+    if (speakBtn) speakBtn.addEventListener("click", (e) => { stop(e); speak(w.term, lang); });
     tip.querySelector(".vn-close").addEventListener("click", (e) => { stop(e); unpinAndHide(); });
-    const tipGuide = tip.querySelector(".vn-guide");
-    if (tipGuide) tipGuide.addEventListener("click", (e) => { stop(e); openExtPage("welcome"); });
-    tip.querySelector(".vn-settings").addEventListener("click", (e) => { stop(e); openExtPage("options"); });
     tip.querySelector(".vn-delete").addEventListener("click", (e) => {
       stop(e);
       deleteWord(w.id);
@@ -964,36 +986,52 @@
       const newDisabled = !w.disabled;
       updateWordById(w.id, (rec) => { rec.disabled = newDisabled; return rec; });
       unpinAndHide();
-      showToast(newDisabled ? `Đã tắt "${w.term}"` : `Đã bật lại "${w.term}"`);
+      showToast(newDisabled ? `Đã tạm ẩn "${w.term}" — bật lại trong danh sách` : `Đã bật lại "${w.term}"`);
     });
-    tip.querySelector(".vn-learn").addEventListener("click", (e) => {
+    const learnBtn = tip.querySelector(".vn-learn");
+    if (learnBtn) learnBtn.addEventListener("click", (e) => {
       stop(e);
-      updateWordById(w.id, (rec) => { rec.learned = true; rec.learnedAt = new Date().toISOString(); return rec; });
+      const id = w.id;
+      updateWordById(id, (rec) => { rec.learned = true; rec.learnedAt = new Date().toISOString(); return rec; });
       unpinAndHide();
-      showToast(`✓ Đã đánh dấu "${w.term}" — ${vnDoneLabel(w)}`);
+      showToast(`✓ "${w.term}" — ${vnDoneLabel(w)}`, {
+        actions: [{ label: "Hoàn tác", onClick: () => updateWordById(id, (rec) => { rec.learned = false; delete rec.learnedAt; return rec; }) }]
+      });
     });
 
-    // Nút Sửa: mở inline editor cho nghĩa + ghi chú
+    // Nút Sửa: mở inline editor cho nghĩa + ghi chú + tag
     const editArea = tip.querySelector(".vn-edit-area");
     const actionsBar = tip.querySelector(".vn-actions");
     const meaningInput = tip.querySelector(".vn-edit-meaning");
     const noteInput = tip.querySelector(".vn-edit-note");
     const tagsInput = tip.querySelector(".vn-edit-tags");
+    const growMeaning = () => {
+      meaningInput.style.height = "auto";
+      meaningInput.style.height = Math.min(meaningInput.scrollHeight + 2, 160) + "px";
+    };
+    meaningInput.addEventListener("input", growMeaning);
     const exitEditMode = () => {
       tooltipEditing = false;
+      // Bỏ focus khỏi ô đã ẩn — nếu không, Esc tiếp theo vẫn rơi vào ô đó và không đóng được thẻ.
+      if (tip.contains(document.activeElement)) document.activeElement.blur();
       editArea.style.display = "none";
       actionsBar.style.display = "flex";
     };
-    tip.querySelector(".vn-edit").addEventListener("click", (e) => {
+    const enterEditMode = (e) => {
       stop(e);
       pinned = true;
       tooltipEditing = true;
       tip.classList.add("pinned");
       actionsBar.style.display = "none";
       editArea.style.display = "block";
+      growMeaning();
       meaningInput.focus();
       meaningInput.select();
-    });
+      placeTooltip(tip, span); // chiều cao đổi → đặt lại để không tràn màn hình
+    };
+    tip.querySelector(".vn-edit").addEventListener("click", enterEditMode);
+    const emptyMeaning = tip.querySelector(".vn-meaning-empty");
+    if (emptyMeaning) emptyMeaning.addEventListener("click", enterEditMode);
     tip.querySelector(".vn-edit-cancel").addEventListener("click", (e) => {
       stop(e);
       exitEditMode();
@@ -1019,7 +1057,8 @@
       inp.addEventListener("click", stop);
       inp.addEventListener("keydown", (ev) => {
         if (ev.isComposing || ev.keyCode === 229) return;
-        if (ev.key === "Enter") { ev.preventDefault(); doSaveEdit(); }
+        // Enter lưu; Shift+Enter xuống dòng trong ô nghĩa.
+        if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); doSaveEdit(); }
         if (ev.key === "Escape") {
           ev.preventDefault();
           ev.stopPropagation();
@@ -1028,6 +1067,11 @@
       });
     });
 
+    placeTooltip(tip, span);
+  }
+
+  // Đặt tooltip sát chữ: ưu tiên bên dưới, tràn thì lật lên trên, luôn trong khung nhìn.
+  function placeTooltip(tip, span) {
     const rect = span.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) { hideTooltip(); return; }
     tip.style.display = "block";
@@ -1066,38 +1110,24 @@
     }, 250);
   }
 
-  function speak(text, lang = "en-US") {
-    try {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    } catch (e) {}
-  }
-
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // ---------- Floating save button khi bôi đen ----------
+  // ---------- Thanh nổi khi bôi đen: [nghĩa xem trước] [Dịch] [Lưu] [🔊] [⧉] ----------
+  // Tách rõ 2 việc: DỊCH = chỉ xem bản dịch, không lưu gì · LƯU = lưu & tô sáng.
+  // Trước đây chỉ có nút "✓ Lưu" (icon ✓ trông như "đã lưu rồi"); muốn đọc bản dịch
+  // một đoạn dài cũng phải bấm Lưu → mở thẻ lưu kiểu "Từ vựng" → rất dễ nhầm.
   let selBtn = null;
   let selBtnCurrentText = "";
   let selBtnToken = 0;             // huỷ kết quả dịch cũ khi selection đổi
   const selTransCache = new Map(); // text -> bản dịch (tránh gọi lại API)
 
-  // Ngưỡng ký tự để hiện bản dịch preview trên nút nổi. Dài hơn (cụm/đoạn dài)
-  // → bỏ qua dịch, chỉ hiện nút Lưu + Copy (dịch cả câu vừa vô ích vừa bị cắt).
-  const SEL_TRANSLATE_MAX = 40;
-  // Thẻ mini cho phép dịch cả đoạn dài (khác tiếng Việt) — endpoint Google trả
-  // nhiều segment nên ghép lại được. Chặn trên ~1500 ký tự cho an toàn URL GET.
-  const TRANSLATE_MAX = 1500;
-
-  // Nhận diện tiếng Việt qua các ký tự đặc trưng (ă â đ ê ô ơ ư + dấu thanh
-  // khối U+1EA0–1EF9). Đích dịch là tiếng Việt nên text Việt thì khỏi dịch.
-  function isVietnamese(s) {
-    return /[ăâđêôơưĂÂĐÊÔƠƯẠ-ỹ]/.test(s);
-  }
+  const SEL_TRANSLATE_MAX = 40;    // xem trước nghĩa ngay trên thanh: chỉ từ/cụm ngắn
+  const SAVE_MAX = 2000;           // lưu tối đa
+  const SEL_MAX = 5000;            // dịch tối đa (cả đoạn dài, chia nhỏ khi gọi API)
+  const TRANSLATE_MAX = SEL_MAX;
 
   // Bản dịch có "thật" không: rỗng hoặc trùng nguyên văn nguồn → coi như không
   // dịch được (viết tắt, tên riêng, từ Việt không dấu… Google trả về y nguyên).
@@ -1107,79 +1137,80 @@
     return norm(tr) !== norm(src);
   }
 
-  // Phân tích đoạn chọn có "dịch được" không. Email / số / URL / ký hiệu thuần
-  // (không có chữ cái nào), tiếng Việt, hoặc đoạn quá dài → khỏi dịch, chỉ hiện nút Lưu.
+  const HAS_LETTER = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ぀-ヿ㐀-鿿가-힯]/;
+  function isEmailOrUrl(t) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t) || /^(https?:\/\/|www\.)\S+$/i.test(t);
+  }
+  // Có nên TỰ dịch sang tiếng Việt không (xem trước / điền sẵn nghĩa khi lưu).
   function looksTranslatable(text, maxLen = SEL_TRANSLATE_MAX) {
     const t = (text || "").trim();
-    if (!t) return false;
-    if (t.length > maxLen) return false;                             // dài quá ngưỡng cho ngữ cảnh
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return false;          // email
-    if (/^(https?:\/\/|www\.)\S+$/i.test(t)) return false;           // URL
-    if (isVietnamese(t)) return false;                               // đã là tiếng Việt
-    // Cần ít nhất 1 chữ cái thực: Latin (có dấu), Hy Lạp, Cyrillic, CJK, Kana, Hangul…
-    if (!/[A-Za-zÀ-ɏͰ-ϿЀ-ӿ぀-ヿ㐀-鿿가-힯]/.test(t)) return false;
-    return true;
+    if (!t || t.length > maxLen || isEmailOrUrl(t) || isVietnamese(t)) return false;
+    return HAS_LETTER.test(t);
   }
-
-  // Gợi ý loại mục dựa trên TÍN HIỆU CÓ Ý NGHĨA với tiện ích (không dò từ khoá vụn):
-  //   - tiếng nước ngoài → Từ vựng (đang học)
-  //   - tiếng Việt        → Tư liệu (người Việt không "học" tiếng Việt → là ghi chú/tư liệu)
-  //   - URL               → Tư liệu (nguồn tham khảo, không phải từ để học)
-  // Đây là GỢI Ý mặc định — user luôn bấm chip đổi lại được.
-  function guessType(text) {
+  // Nút "Dịch" có ý nghĩa không — kể cả chữ Việt (khi đó dịch sang tiếng Anh).
+  function canTranslate(text) {
     const t = (text || "").trim();
+    return !!t && t.length <= SEL_MAX && !isEmailOrUrl(t) && HAS_LETTER.test(t);
+  }
+  // Đích dịch: chữ Việt → tiếng Anh, còn lại → tiếng Việt.
+  function targetLangFor(text) { return isVietnamese(text) ? "en" : "vi"; }
+  function isLongText(text) { return keyOf(text).length > HIGHLIGHT_MAX; }
+
+  // Gợi ý loại mục theo nội dung (người dùng luôn bấm chip đổi lại được):
+  //   - URL                         → Tư liệu
+  //   - đoạn dài (> 60 ký tự / > 6 từ) → Quan trọng (là ý cần nhớ, không phải từ để học)
+  //   - từ/cụm ngắn tiếng nước ngoài → Từ vựng
+  //   - từ/cụm ngắn tiếng Việt      → Quan trọng
+  function guessType(text) {
+    const t = keyOf(text);
     if (!t) return "vocab";
     if (/^(https?:\/\/|www\.)\S+/i.test(t)) return "reference";
-    return isVietnamese(t) ? "reference" : "vocab";
+    if (t.length > HIGHLIGHT_MAX || t.split(" ").length > 6) return "important";
+    return isVietnamese(t) ? "important" : "vocab";
   }
 
   function buildSelBtn(text) {
-    const existing = wordMap.get(text.toLowerCase()) || variantMap.get(text.toLowerCase());
+    const existing = findWordByText(text);
     const brand = `<img class="vn-sel-brand" src="${BRAND_ICON}" alt="" draggable="false">`;
-    // Các nút phụ bật/tắt theo cài đặt. Phát âm chỉ hiện với từ/cụm ngắn (đọc cả
-    // đoạn dài vừa vô nghĩa vừa lâu).
+    // Phát âm chỉ với từ/cụm ngắn (đọc cả đoạn dài vừa vô nghĩa vừa lâu).
     const speakBtn = (settings.showSelSpeak !== false && text.length <= 60)
-      ? `<button class="vn-sel-speak" title="Phát âm">${VN_ICON.speak}</button>` : "";
+      ? `<button class="vn-sel-ico vn-sel-speak" title="Phát âm" aria-label="Phát âm">${VN_ICON.speak}</button>` : "";
     const copyBtn = (settings.showSelCopy !== false)
-      ? `<button class="vn-sel-copy" title="Sao chép">${VN_ICON.copy}</button>` : "";
-    const extras = speakBtn + copyBtn;
+      ? `<button class="vn-sel-ico vn-sel-copy" title="Sao chép" aria-label="Sao chép">${VN_ICON.copy}</button>` : "";
+    const trBtn = canTranslate(text)
+      ? `<button class="vn-sel-act vn-sel-tr" title="${isVietnamese(text) ? "Dịch sang tiếng Anh" : "Xem bản dịch — không lưu"} (Alt+Shift+D)">${VN_ICON.translate}<span>Dịch</span></button>` : "";
+    let lead = brand, saveBtn = "";
     if (existing) {
-      selBtn.className = "vocab-note-sel-btn vn-sel-exists";
-      selBtn.innerHTML =
-        `<button class="vn-sel-save" disabled>${brand}<span class="vn-sel-action">${VN_ICON.save} Đã lưu</span></button>` +
-        extras;
-      return;
-    }
-    selBtn.className = "vocab-note-sel-btn";
-    if (looksTranslatable(text)) {
-      // Không hiện chữ gốc — chỉ hiện bản dịch (đổ vào .vn-sel-trans sau khi fetch xong)
-      selBtn.innerHTML =
-        `<button class="vn-sel-save">${brand}<span class="vn-sel-trans"></span><span class="vn-sel-action">${VN_ICON.save} Lưu</span></button>` +
-        extras;
+      // Đã lưu rồi → nhắc luôn nghĩa đã ghi.
+      if (existing.meaning) lead += `<span class="vn-sel-trans" title="Nghĩa đã lưu">${escapeHtml(existing.meaning)}</span>`;
+      saveBtn = `<button class="vn-sel-act vn-sel-saved" disabled title="Đã có trong Highlight Note">${VN_ICON.save}<span>Đã lưu</span></button>`;
     } else {
-      // Email / số / URL… không dịch được → chỉ cần nút Lưu
-      selBtn.innerHTML =
-        `<button class="vn-sel-save">${brand}<span class="vn-sel-action">${VN_ICON.save} Lưu</span></button>` +
-        extras;
+      if (looksTranslatable(text)) lead += `<span class="vn-sel-trans" title="Bấm để xem bản dịch đầy đủ"></span>`;
+      if (text.length <= SAVE_MAX) {
+        saveBtn = `<button class="vn-sel-act vn-sel-save" title="Lưu & tô sáng mỗi khi gặp lại (Alt+Shift+H)">${VN_ICON.highlighter}<span>Lưu</span></button>`;
+      }
     }
+    selBtn.className = "vocab-note-sel-btn" + (existing ? " vn-sel-exists" : "");
+    selBtn.innerHTML = `<span class="vn-sel-lead">${lead}</span>${trBtn}${saveBtn}${speakBtn}${copyBtn}`;
   }
 
   // Phát âm đoạn đang chọn (theo ngôn ngữ nhận diện được).
   function doSpeakSelection() {
     const text = selBtnCurrentText;
-    if (text) speak(text, detectLang(text) === "ja" ? "ja-JP" : "en-US");
+    if (text) speak(text, detectedLangOf(text) || detectLang(text));
   }
 
-  function doCopySelection() {
-    const text = selBtnCurrentText;
-    const finish = () => flashCopied();
+  function copyText(text, done) {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(finish).catch(() => fallbackCopy(text, finish));
-      } else {
-        fallbackCopy(text, finish);
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+        return;
       }
-    } catch (_) { fallbackCopy(text, finish); }
+    } catch (_) {}
+    fallbackCopy(text, done);
+  }
+  function doCopySelection() {
+    copyText(selBtnCurrentText, flashCopied);
   }
 
   // Phản hồi tức thì ngay trên nút: đổi icon copy thành ✓ "Đã chép", rồi ẩn thanh.
@@ -1209,27 +1240,34 @@
     } catch (_) {}
   }
 
-  function doSaveSelection() {
-    const existing = wordMap.get(selBtnCurrentText.toLowerCase()) || variantMap.get(selBtnCurrentText.toLowerCase());
-    const text = selBtnCurrentText;
-    // Chụp vị trí selection TRƯỚC khi xoá để mini-card đặt đúng chỗ (sát từ vừa chọn)
-    let anchorRect = null;
+  // Chụp chữ + vị trí + ngữ cảnh neo của selection hiện tại (trước khi nó bị xoá).
+  function grabSelection(expected) {
     const sel = window.getSelection();
+    let rect = null;
     if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
       const r = sel.getRangeAt(0).getBoundingClientRect();
-      if (r && (r.width > 0 || r.height > 0)) {
-        anchorRect = { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
-      }
+      if (r && (r.width > 0 || r.height > 0)) rect = { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
     }
-    // Chụp dữ liệu neo TRƯỚC khi xoá selection (đoạn dài → neo lại trên trang này).
-    const anchorCtx = currentSelectionAnchor(text);
+    const text = (expected || (sel ? sel.toString() : "")).trim();
+    return { sel, text, rect, anchorCtx: currentSelectionAnchor(text) };
+  }
+
+  function doSaveSelection() {
+    const g = grabSelection(selBtnCurrentText);
+    const existing = findWordByText(g.text);
     hideSelBtn();
-    sel && sel.removeAllRanges();
+    g.sel && g.sel.removeAllRanges();
     if (existing) {
       showToast(`"${existing.term}" đã có trong danh sách rồi.`, { warn: true });
       return;
     }
-    if (text && text.length <= 2000) openAddMiniCard(text, anchorRect, selTransCache.get(text) || "", anchorCtx);
+    if (g.text && g.text.length <= SAVE_MAX) openAddMiniCard(g.text, g.rect, selTransCache.get(g.text) || "", g.anchorCtx);
+  }
+
+  function doTranslateSelection() {
+    const g = grabSelection(selBtnCurrentText);
+    hideSelBtn();
+    if (g.text) openTranslateCard(g.text, g.rect, g.anchorCtx);
   }
 
   function ensureSelBtn() {
@@ -1242,13 +1280,16 @@
       e.preventDefault();
       e.stopPropagation();
     });
-    // Phân luồng click cho 2 nút con
     selBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       if (e.target.closest(".vn-sel-speak")) { doSpeakSelection(); return; }
       if (e.target.closest(".vn-sel-copy")) { doCopySelection(); return; }
       if (e.target.closest(".vn-sel-save")) { doSaveSelection(); return; }
+      if (e.target.closest(".vn-sel-tr")) { doTranslateSelection(); return; }
+      // Bấm vào nghĩa xem trước → mở bản dịch đầy đủ
+      if (e.target.closest(".vn-sel-lead") && !selBtn.classList.contains("vn-sel-exists")
+          && selBtn.querySelector(".vn-sel-trans:not(:empty)")) { doTranslateSelection(); return; }
     });
     document.body.appendChild(selBtn);
     return selBtn;
@@ -1277,13 +1318,9 @@
     btn.style.display = "flex";
     positionSelBtn(rect);
 
-    // Preview dịch (chỉ khi từ chưa có & còn mạng)
-    const existing = wordMap.get(text.toLowerCase()) || variantMap.get(text.toLowerCase());
-    if (existing) return;
+    // Xem trước nghĩa (chỉ từ/cụm ngắn chưa lưu, còn mạng, người dùng cho phép)
     const transEl = btn.querySelector(".vn-sel-trans");
-    if (!transEl) return;
-    // Tôn trọng cài đặt privacy: tắt "dịch nhanh khi bôi đen" → KHÔNG gọi mạng lúc
-    // chọn chữ. Vẫn lưu bình thường (dịch sẽ chạy trong mini-card sau khi bấm Lưu).
+    if (!transEl || findWordByText(text)) return;
     if (settings.previewTranslate === false) return;
     const cached = selTransCache.get(text);
     if (cached) {
@@ -1303,7 +1340,6 @@
         selTransCache.set(text, tr);
         transEl.textContent = tr;
       } else {
-        // Không dịch được (viết tắt, tên riêng…) → coi như email/số: chỉ hiện nút Lưu
         transEl.textContent = "";
       }
       positionSelBtn(rect);
@@ -1315,7 +1351,142 @@
     selBtnCurrentText = "";
   }
 
+  // ---------- Thẻ DỊCH (chỉ xem, không lưu) ----------
+  // Từ ngắn: chữ to + phiên âm + phát âm + từ điển. Đoạn dài: nguyên văn thu gọn,
+  // bản dịch dễ đọc, cuộn được. Có nút Chép bản dịch / Google Dịch / Lưu (nếu muốn).
+  function dictLinkFor(term, lang) {
+    if (lang === "ja") return { url: `https://jisho.org/search/${encodeURIComponent(term)}`, title: "Jisho" };
+    if (lang === "en") return { url: `https://dictionary.cambridge.org/dictionary/english/${encodeURIComponent(term)}`, title: "Cambridge" };
+    return { url: `https://en.wiktionary.org/wiki/${encodeURIComponent(term)}`, title: "Wiktionary" };
+  }
+
+  function openTranslateCard(text, anchorRect, anchorCtx) {
+    document.querySelectorAll(".vocab-note-mini-card").forEach(el => el.remove());
+    const tl = targetLangFor(text);
+    const isWord = text.length <= SEL_TRANSLATE_MAX && text.split(/\s+/).length <= 4;
+    let srcLang = detectedLangOf(text) || detectLang(text);
+    const existing = findWordByText(text);
+    const card = document.createElement("div");
+    card.className = "vocab-note-mini-card vn-tr-card" + (isWord ? "" : " vn-long");
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", "Bản dịch");
+    const dict = dictLinkFor(text, srcLang);
+    card.innerHTML = `
+      <div class="vn-mini-head">
+        <img class="vn-mini-brand" src="${BRAND_ICON}" alt="" draggable="false" />
+        <span class="vn-tr-title">Dịch</span>
+        <span class="vn-tr-langs"><span class="vn-tr-sl">${escapeHtml(srcLang.toUpperCase())}</span> → ${tl.toUpperCase()}</span>
+        <span class="vn-tr-space"></span>
+        <button class="vn-mini-ibtn vn-mini-x" title="Đóng (Esc)" aria-label="Đóng">${VN_ICON.close}</button>
+      </div>
+      <div class="vn-tr-body">
+        ${isWord
+          ? `<div class="vn-tr-word"><b>${escapeHtml(text)}</b>
+               <button class="vn-mini-ibtn vn-tr-speak" title="Phát âm" aria-label="Phát âm">${VN_ICON.speak}</button></div>
+             <div class="vn-mini-phonetic" style="display:none"></div>`
+          : `<div class="vn-tr-src" title="Bấm để xem đầy đủ">${escapeHtml(text)}</div>`}
+        <div class="vn-tr-out vn-tr-loading">Đang dịch…</div>
+      </div>
+      <div class="vn-tr-foot">
+        <button class="vn-tr-btn vn-tr-copy" title="Sao chép bản dịch" disabled>${VN_ICON.copy}<span>Sao chép</span></button>
+        <a class="vn-tr-btn" href="https://translate.google.com/?sl=auto&tl=${tl}&text=${encodeURIComponent(text.slice(0, 4000))}" target="_blank" rel="noopener" title="Mở trong Google Dịch">${VN_ICON.globe}<span>Google</span></a>
+        ${isWord && tl === "vi" ? `<a class="vn-tr-btn vn-tr-dict" href="${dict.url}" target="_blank" rel="noopener" title="Tra ${dict.title}">${VN_ICON.book}</a>` : ""}
+        <span class="vn-tr-space"></span>
+        ${existing
+          ? `<span class="vn-tr-saved">${VN_ICON.save} Đã lưu</span>`
+          : (text.length <= SAVE_MAX ? `<button class="vn-mini-btn vn-mini-primary vn-tr-save" title="Lưu & tô sáng mỗi khi gặp lại">${VN_ICON.highlighter} Lưu</button>` : "")}
+      </div>`;
+    document.body.appendChild(card);
+
+    const out = card.querySelector(".vn-tr-out");
+    const copyBtn = card.querySelector(".vn-tr-copy");
+    let translation = "";
+
+    const src = card.querySelector(".vn-tr-src");
+    if (src) src.addEventListener("click", () => { src.classList.toggle("open"); positionMiniCard(card, anchorRect); });
+    const sp = card.querySelector(".vn-tr-speak");
+    if (sp) sp.onclick = () => speak(text, srcLang);
+
+    copyBtn.onclick = () => {
+      if (!translation) return;
+      copyText(translation, () => {
+        copyBtn.querySelector("span").textContent = "Đã chép ✓";
+        setTimeout(() => { if (copyBtn.isConnected) copyBtn.querySelector("span").textContent = "Sao chép"; }, 1500);
+      });
+    };
+    const saveBtn = card.querySelector(".vn-tr-save");
+    if (saveBtn) saveBtn.onclick = () => {
+      closeCard();
+      // Từ ngắn: bản dịch thành nghĩa. Đoạn dài: người dùng vừa đọc bản dịch → giữ làm ghi chú.
+      openAddMiniCard(text, anchorRect, translation, anchorCtx);
+    };
+
+    function closeCard() {
+      card.remove();
+      document.removeEventListener("mousedown", onOutside, true);
+    }
+    function onOutside(ev) {
+      if (!card.isConnected) { document.removeEventListener("mousedown", onOutside, true); return; }
+      if (!card.contains(ev.target)) closeCard();
+    }
+    setTimeout(() => document.addEventListener("mousedown", onOutside, true), 0);
+    card.querySelector(".vn-mini-x").onclick = closeCard;
+    card.tabIndex = -1;
+    card.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Escape") { e.preventDefault(); closeCard(); }
+    });
+
+    positionMiniCard(card, anchorRect);
+    try { card.focus({ preventScroll: true }); } catch (e) {}
+
+    if (isWord && srcLang === "en" && tl === "vi") fetchPhonetic(text, "en").then(p => {
+      if (!p || !card.isConnected) return;
+      const el = card.querySelector(".vn-mini-phonetic");
+      el.textContent = p;
+      el.style.display = "block";
+      positionMiniCard(card, anchorRect);
+    });
+
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      out.classList.remove("vn-tr-loading");
+      out.textContent = "Không có mạng — chưa dịch được.";
+      return;
+    }
+    translateFull(text, tl).then(tr => {
+      if (!card.isConnected) return;
+      out.classList.remove("vn-tr-loading");
+      const dl = detectedLangOf(text);
+      if (dl) { srcLang = dl; card.querySelector(".vn-tr-sl").textContent = dl.toUpperCase(); }
+      if (isRealTranslation(text, tr)) {
+        translation = tr;
+        out.textContent = tr;
+        copyBtn.disabled = false;
+        if (isWord && tl === "vi") selTransCache.set(text, tr);
+      } else if (tr) {
+        out.textContent = "Không có bản dịch khác — có thể là tên riêng, hoặc chữ đã đúng ngôn ngữ đích.";
+        out.classList.add("vn-tr-empty");
+      } else {
+        out.textContent = "Chưa dịch được — kiểm tra mạng rồi thử lại, hoặc bấm Google Dịch.";
+        out.classList.add("vn-tr-empty");
+      }
+      positionMiniCard(card, anchorRect);
+    });
+  }
+
+  // Đang bôi đen trong ô nhập / vùng soạn thảo (Gmail, Notion, Docs…) → người dùng
+  // đang VIẾT, không phải đọc: đừng chen thanh "Lưu" vào. Vẫn lưu được bằng
+  // Alt+Shift+H hoặc chuột phải.
+  function selectionInEditable(sel) {
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return true;
+    const n = sel && sel.anchorNode;
+    const el = n && (n.nodeType === 1 ? n : n.parentElement);
+    return !!(el && el.isContentEditable);
+  }
+
   document.addEventListener("mouseup", (e) => {
+    if (superseded) return;
     if (settings.enabled === false || isHostBlacklisted()) { hideSelBtn(); return; }
     // Người dùng có thể tắt thanh nổi "Lưu" khi bôi đen (vẫn lưu được bằng
     // Alt+Shift+H hoặc chuột phải → "Tô sáng & lưu").
@@ -1326,9 +1497,10 @@
     setTimeout(() => {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed) { hideSelBtn(); return; }
+      if (selectionInEditable(sel)) { hideSelBtn(); return; }
       const text = sel.toString().trim();
       // Bỏ qua nếu chỉ chọn 1 ký tự hoặc quá dài
-      if (!text || text.length < 2 || text.length > 2000) { hideSelBtn(); return; }
+      if (!text || text.length < 2 || text.length > SEL_MAX) { hideSelBtn(); return; }
       try {
         const range = sel.getRangeAt(0);
         const rect = range.getBoundingClientRect();
@@ -1468,18 +1640,8 @@
 
   // Scroll: reposition tooltip ghim để bám theo từ
   window.addEventListener("scroll", () => {
-    if (pinned && activeSpan && activeSpan.isConnected) {
-      const rect = activeSpan.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) return;
-      const tip = tooltipEl;
-      if (!tip) return;
-      const tipRect = tip.getBoundingClientRect();
-      let left = rect.left;
-      let top = rect.bottom + 4;
-      if (left + tipRect.width > window.innerWidth - 10) left = window.innerWidth - tipRect.width - 10;
-      if (top + tipRect.height > window.innerHeight - 10) top = rect.top - tipRect.height - 4;
-      tip.style.left = Math.max(8, left) + "px";
-      tip.style.top = Math.max(8, top) + "px";
+    if (pinned && activeSpan && activeSpan.isConnected && tooltipEl && tooltipEl.style.display !== "none") {
+      placeTooltip(tooltipEl, activeSpan);
     }
   }, { passive: true });
 
@@ -1500,7 +1662,8 @@
       // Gặp đủ ngưỡng → tự đánh dấu "đã thuộc" (giữ từ, ngừng tô sáng).
       // KHÔNG xoá dữ liệu — chỉ chuyển sang trạng thái learned cho an toàn.
       // Chỉ áp dụng cho từ vựng: việc cần làm / tư liệu không nên tự "xong" vì hover.
-      if (!rec.learned && vnTypeOf(rec) === "vocab" && rec.hoverCount >= (rec.autoDeleteAt || 20)) {
+      if (!rec.learned && vnTypeOf(rec) === "vocab" && settings.learningMode === true
+          && rec.hoverCount >= (rec.autoDeleteAt || 20)) {
         rec.learned = true;
         rec.learnedAt = new Date().toISOString();
         justMastered = true;
@@ -1531,7 +1694,7 @@
         // storage onChanged sẽ tự rescan, nhưng gỡ span ngay để đỡ phải chờ.
         // Dùng vòng lặp (không phải attribute-selector) vì đoạn dài có thể chứa
         // xuống dòng / dấu " làm hỏng selector. Khớp theo term HOẶC anchorId.
-        const termLc = removed.term.toLowerCase();
+        const termLc = keyOf(removed.term);
         document.querySelectorAll(".vocab-note-highlight").forEach(el => {
           if (el.dataset.term !== termLc && el.dataset.anchorId !== removed.id) return;
           if (el.parentNode) {
@@ -1653,38 +1816,63 @@
   // Cache theo phiên + gộp request trùng: mini-card, tooltip và preview khi bôi đen
   // dùng chung một bộ nhớ, tránh gọi lại Google Translate cho cùng một đoạn (đỡ bị
   // rate-limit khi bôi đen liên tục / mở lại cùng trang).
-  const _translateCache = new Map();     // text -> bản dịch
-  const _translateInflight = new Map();  // text -> Promise đang chạy
+  const _translateCache = new Map();     // "tl|text" -> bản dịch
+  const _translateInflight = new Map();  // "tl|text" -> Promise đang chạy
   const _detectedLang = new Map();       // text -> mã ngôn ngữ Google tự nhận (vd "es", "fr")
   // Ngôn ngữ nguồn Google đã tự nhận cho đoạn text (rỗng nếu chưa dịch lần nào).
   function detectedLangOf(text) { return _detectedLang.get((text || "").trim()) || ""; }
-  async function autoTranslate(text, srcLang) {
+  // tl: ngôn ngữ đích (mặc định tiếng Việt). Chỉ dùng cho đoạn ≤ ~1500 ký tự (GET);
+  // đoạn dài hơn dùng translateFull (chia nhỏ theo câu).
+  async function autoTranslate(text, srcLang, tl = "vi") {
     const key = (text || "").trim();
     if (!key) return "";
-    if (_translateCache.has(key)) return _translateCache.get(key);
-    if (_translateInflight.has(key)) return _translateInflight.get(key);
+    const ck = tl + "|" + key;
+    if (_translateCache.has(ck)) return _translateCache.get(ck);
+    if (_translateInflight.has(ck)) return _translateInflight.get(ck);
     const p = (async () => {
       try {
         // sl=auto: để Google tự nhận diện ngôn ngữ nguồn → dịch đúng cả từ Pháp/Đức/
-        // Tây Ban Nha… Trước đây ép sl="en" khiến mọi từ không phải CJK bị coi là
-        // tiếng Anh và dịch sai. (srcLang vẫn dùng cho phát âm/tra từ điển ở nơi khác.)
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(key)}`;
+        // Tây Ban Nha… (srcLang vẫn dùng cho phát âm/tra từ điển ở nơi khác.)
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(key)}`;
         const res = await fetch(url);
         if (!res.ok) return "";
         const data = await res.json();
         if (Array.isArray(data) && Array.isArray(data[0])) {
-          // data[2] = mã ngôn ngữ nguồn Google phát hiện được → lưu để badge/từ điển
-          // hiển thị đúng (thay vì mặc định "en" cho mọi thứ không phải CJK).
           if (typeof data[2] === "string" && data[2]) _detectedLang.set(key, data[2].toLowerCase());
           const out = data[0].map(seg => (seg && seg[0]) || "").join("").trim();
-          if (out) _translateCache.set(key, out); // chỉ cache khi dịch được
+          if (out) _translateCache.set(ck, out); // chỉ cache khi dịch được
           return out;
         }
       } catch (e) {}
       return "";
     })();
-    _translateInflight.set(key, p);
-    try { return await p; } finally { _translateInflight.delete(key); }
+    _translateInflight.set(ck, p);
+    try { return await p; } finally { _translateInflight.delete(ck); }
+  }
+
+  // Dịch cả đoạn dài: chia theo câu thành các khúc ≤ 1400 ký tự, dịch song song, ghép lại.
+  async function translateFull(text, tl = "vi") {
+    const t = (text || "").trim();
+    if (t.length <= 1500) return autoTranslate(t, null, tl);
+    const pieces = t.match(/[^.!?。！？\n]+[.!?。！？]*\s*|\n+/g) || [t];
+    const chunks = [];
+    let cur = "";
+    for (let p of pieces) {
+      while (p.length > 1400) { // câu quá dài (hiếm) → cắt cứng
+        if (cur) { chunks.push(cur); cur = ""; }
+        chunks.push(p.slice(0, 1400));
+        p = p.slice(1400);
+      }
+      if ((cur + p).length > 1400 && cur) { chunks.push(cur); cur = ""; }
+      cur += p;
+    }
+    if (cur.trim()) chunks.push(cur);
+    const outs = await Promise.all(chunks.map(c => autoTranslate(c, null, tl)));
+    if (outs.some(o => !o)) return outs.every(o => !o) ? "" : outs.filter(Boolean).join(" ");
+    // Nguồn nhận diện của khúc đầu = nguồn của cả đoạn
+    const dl = detectedLangOf(chunks[0]);
+    if (dl) _detectedLang.set(t, dl);
+    return outs.join(" ").replace(/ *\n */g, "\n");
   }
 
   // Đặt mini-card sát selection hiện tại; nếu không có → góc dưới phải.
@@ -1737,95 +1925,200 @@
   }
 
   // ---------- Mini-card lưu nhanh (sát từ vừa chọn) ----------
+  // Một ô nghĩa duy nhất, điền sẵn bản dịch, gõ sửa trực tiếp (không còn bước "Sửa"
+  // → "Xem"). Enter = lưu, Shift+Enter = xuống dòng, Esc = đóng. Ghi chú + tag ẩn
+  // sau 1 nút nhỏ để thẻ gọn cho thao tác phổ biến nhất: bôi đen → Enter.
   function openAddMiniCard(term, anchorRect, prefetchedMeaning, anchorCtx) {
-    const existing = wordMap.get(term.toLowerCase()) || variantMap.get(term.toLowerCase());
+    const existing = findWordByText(term);
     if (existing) {
-      showToast(`"${term}" đã có trong danh sách rồi (gốc: "${existing.term}").`, { warn: true });
+      showToast(keyOf(existing.term) === keyOf(term)
+        ? `"${existing.term}" đã có trong danh sách rồi.`
+        : `"${term}" đã có trong danh sách (dạng gốc: "${existing.term}").`, { warn: true });
       return;
     }
     // Đóng mini-card cũ nếu có
     document.querySelectorAll(".vocab-note-mini-card").forEach(el => el.remove());
 
     // Ưu tiên ngôn ngữ Google đã nhận (nếu preview lúc bôi đen đã dịch); nếu chưa,
-    // tạm đoán CJK/en rồi sẽ cập nhật lại sau khi dịch xong bên dưới.
+    // tạm đoán cục bộ rồi sẽ cập nhật lại sau khi dịch xong bên dưới.
     let lang = detectedLangOf(term) || detectLang(term);
+    // Đoạn dài = 1 ý cần nhớ (neo theo trang), KHÔNG phải từ để học: ô nhập là
+    // "Ghi chú", không tự nhồi bản dịch; thẻ rộng hơn, nguyên văn bấm để xem đủ.
+    const isLong = isLongText(term);
     const typeChips = Object.keys(VN_TYPES).map(t =>
-      `<button class="vn-mini-type" data-type="${t}" title="${escapeHtml(VN_TYPES[t].label)}">${VN_TYPE_ICON[t] || VN_TYPES[t].icon}</button>`
+      `<button class="vn-mini-type" data-type="${t}" title="${escapeHtml(VN_TYPES[t].label)}" aria-label="${escapeHtml(VN_TYPES[t].label)}">${VN_TYPE_ICON[t] || VN_TYPES[t].icon}</button>`
     ).join("");
     const card = document.createElement("div");
-    card.className = "vocab-note-mini-card";
+    card.className = "vocab-note-mini-card vn-save-card" + (isLong ? " vn-long" : "");
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-label", "Lưu vào Highlight Note");
     card.innerHTML = `
       <div class="vn-mini-head">
-        <span class="vn-mini-term" title="${escapeHtml(term)}">${escapeHtml(term)}</span>
-        <span class="vn-mini-lang">${lang.toUpperCase()}</span>
-        <button class="vn-mini-speak" title="Phát âm">${VN_ICON.speak}</button>
-        ${actionPinned ? "" : `<button class="vn-mini-settings vn-mini-guide" title="Hướng dẫn sử dụng">${VN_ICON.help}</button>`}
-        <button class="vn-mini-settings vn-mini-gear" title="Cài đặt">${VN_ICON.gear}</button>
-        <button class="vn-mini-x" title="Đóng">${VN_ICON.close}</button>
+        <img class="vn-mini-brand" src="${BRAND_ICON}" alt="" draggable="false" />
+        <span class="vn-mini-term${isLong ? " vn-mini-passage" : ""}" title="${isLong ? "Bấm để xem đầy đủ" : escapeHtml(term)}">${escapeHtml(term)}</span>
+        <span class="vn-mini-lang"></span>
+        <button class="vn-mini-ibtn vn-mini-speak" title="Phát âm" aria-label="Phát âm">${VN_ICON.speak}</button>
+        <button class="vn-mini-ibtn vn-mini-gear" title="Cài đặt Highlight Note" aria-label="Cài đặt">${VN_ICON.gear}</button>
+        <button class="vn-mini-ibtn vn-mini-x" title="Đóng (Esc)" aria-label="Đóng">${VN_ICON.close}</button>
       </div>
-      <div class="vn-mini-types"><span class="vn-mini-types-label">Loại</span>${typeChips}</div>
       <div class="vn-mini-body">
         <div class="vn-mini-phonetic" style="display:none"></div>
-        <div class="vn-mini-meaning-view">⏳ Đang dịch…</div>
-        <div class="vn-mini-edit" style="display:none">
-          <input type="text" class="vn-mini-meaning-input" placeholder="Nghĩa" />
+        <label class="vn-mini-flabel"></label>
+        <textarea class="vn-mini-meaning" rows="1" placeholder="Nghĩa / ghi chú nhanh…"></textarea>
+        <div class="vn-mini-status"></div>
+        <div class="vn-mini-links">
+          <button class="vn-mini-more vn-mini-addtr" type="button" style="display:none">${VN_ICON.translate} Thêm bản dịch vào ghi chú</button>
+          <button class="vn-mini-more vn-mini-more-btn" type="button">＋ Ghi chú thêm, tag</button>
+        </div>
+        <div class="vn-mini-extra" style="display:none">
           <input type="text" class="vn-mini-note-input" placeholder="Ghi chú (tuỳ chọn)" />
-          <input type="text" class="vn-mini-tags-input" placeholder="Tag: dự-án-A… (tuỳ chọn, cách nhau bởi dấu phẩy)" />
+          <input type="text" class="vn-mini-tags-input" placeholder="Tag: dự-án-A, đọc-sau… (cách nhau bởi dấu phẩy)" />
         </div>
       </div>
-      <div class="vn-mini-actions">
-        <button class="vn-mini-btn vn-mini-edit-btn">${VN_ICON.edit} Sửa</button>
-        <button class="vn-mini-btn vn-mini-primary vn-mini-save">${VN_ICON.save} Lưu</button>
+      <div class="vn-mini-types"><span class="vn-mini-type-name"></span>${typeChips}</div>
+      <div class="vn-mini-foot">
+        <span class="vn-mini-kbd"><kbd>Enter</kbd> lưu · <kbd>Esc</kbd> đóng</span>
+        <button class="vn-mini-btn vn-mini-primary vn-mini-save" title="Lưu & tô sáng mỗi khi gặp lại">${VN_ICON.highlighter} Lưu &amp; tô sáng</button>
       </div>
     `;
     document.body.appendChild(card);
 
-    // Định vị sát selection nếu có, fallback góc dưới phải
-    positionMiniCard(card, anchorRect);
-
-    const meaningView = card.querySelector(".vn-mini-meaning-view");
-    const editArea = card.querySelector(".vn-mini-edit");
-    const meaningInput = card.querySelector(".vn-mini-meaning-input");
+    const meaningInput = card.querySelector(".vn-mini-meaning");
+    const statusEl = card.querySelector(".vn-mini-status");
     const noteInput = card.querySelector(".vn-mini-note-input");
     const tagsInput = card.querySelector(".vn-mini-tags-input");
-    const editBtn = card.querySelector(".vn-mini-edit-btn");
+    const extraEl = card.querySelector(".vn-mini-extra");
+    const moreBtn = card.querySelector(".vn-mini-more-btn");
+    const addTrBtn = card.querySelector(".vn-mini-addtr");
+    const flabel = card.querySelector(".vn-mini-flabel");
+    const termEl = card.querySelector(".vn-mini-term");
+    if (isLong) termEl.addEventListener("click", () => { termEl.classList.toggle("open"); positionMiniCard(card, anchorRect); });
     const saveBtn = card.querySelector(".vn-mini-save");
-    const closeBtn = card.querySelector(".vn-mini-x");
+    const langEl = card.querySelector(".vn-mini-lang");
+    const typeNameEl = card.querySelector(".vn-mini-type-name");
     const speakBtn = card.querySelector(".vn-mini-speak");
-    speakBtn.onclick = () => speak(term, lang === "ja" ? "ja-JP" : "en-US");
-    const miniGuideBtn = card.querySelector(".vn-mini-guide");
-    if (miniGuideBtn) miniGuideBtn.onclick = () => openExtPage("welcome");
-    const miniGearBtn = card.querySelector(".vn-mini-gear");
-    if (miniGearBtn) miniGearBtn.onclick = () => openExtPage("options");
 
-    let isEditing = false;
+    const setLang = (l) => {
+      lang = l;
+      langEl.textContent = (l || "").toUpperCase();
+      langEl.style.display = l && l !== "vi" ? "" : "none";
+      speakBtn.style.display = (l === "vi" || isLong) ? "none" : "";
+    };
+    setLang(lang);
+    speakBtn.onclick = () => speak(term, lang);
+    card.querySelector(".vn-mini-gear").onclick = () => openExtPage("options");
+
+    const setStatus = (text, kind) => {
+      statusEl.textContent = text || "";
+      statusEl.className = "vn-mini-status" + (kind ? " " + kind : "");
+    };
+    const grow = () => {
+      meaningInput.style.height = "auto";
+      meaningInput.style.height = Math.min(meaningInput.scrollHeight + 2, 168) + "px";
+    };
+    let dirty = false; // người dùng đã tự gõ → không để bản dịch đến muộn ghi đè
+    meaningInput.addEventListener("input", () => { dirty = true; grow(); setStatus(""); });
+
     let fetchedPhonetic = "";
     let selectedType = "vocab";
+    let pendingTranslate = null;
 
-    // Chọn loại mục (vocab mặc định → giữ nguyên trải nghiệm học từ như cũ)
+    // Chọn loại mục (gợi ý theo nội dung; user bấm chip đổi lại được)
     const typeBtns = card.querySelectorAll(".vn-mini-type");
     const setType = (t) => {
       selectedType = VN_TYPES[t] ? t : "vocab";
-      typeBtns.forEach(b => b.classList.toggle("active", b.dataset.type === selectedType));
+      typeBtns.forEach(b => {
+        const on = b.dataset.type === selectedType;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
       card.setAttribute("data-vn-type", selectedType);
+      typeNameEl.textContent = VN_TYPES[selectedType].label;
+      // Nhãn ô nhập theo loại: từ vựng → "Nghĩa"; còn lại → "Ghi chú".
+      flabel.textContent = selectedType === "vocab" && !isLong ? "Nghĩa" : (isLong && translation ? "Ghi chú / bản dịch" : "Ghi chú");
     };
+    let translation = isLong ? (prefetchedMeaning || "") : "";
     typeBtns.forEach(b => { b.onclick = () => setType(b.dataset.type); });
-    setType(guessType(term)); // gợi ý loại theo nội dung; user bấm chip đổi lại được
+    setType(guessType(term));
 
-    // translatable: dịch được không (cho phép cả ĐOẠN DÀI khác tiếng Việt, tới TRANSLATE_MAX).
-    // Email/số/URL/tiếng Việt/quá dài → bỏ dịch, mở sẵn ô Nghĩa trống cho user tự ghi.
-    const translatable = looksTranslatable(term, TRANSLATE_MAX);
-    // Phiên âm chỉ hợp với TỪ/CỤM NGẮN (tra từ điển); đoạn dài thì bỏ qua.
+    moreBtn.onclick = () => {
+      extraEl.style.display = "block";
+      moreBtn.style.display = "none";
+      noteInput.focus();
+      positionMiniCard(card, anchorRect);
+    };
+
+    // Từ/cụm ngắn tiếng nước ngoài → tự điền nghĩa. Đoạn dài → để trống ô Ghi chú,
+    // chỉ dịch khi người dùng bấm "Thêm bản dịch" (hoặc vừa xem bản dịch ở thẻ Dịch).
+    const foreignLong = isLong && looksTranslatable(term, TRANSLATE_MAX);
+    const translatable = !isLong && looksTranslatable(term, TRANSLATE_MAX);
     const wantPhonetic = translatable && term.length <= SEL_TRANSLATE_MAX;
-    if (!translatable) {
-      meaningInput.value = "";
-      noteInput.value = "";
-      toggleEdit(); // sang chế độ sửa, focus ô Nghĩa (input đang rỗng)
+    const online = typeof navigator !== "undefined" ? navigator.onLine !== false : true;
+
+    if (isLong) {
+      meaningInput.placeholder = "Vì sao đoạn này quan trọng? (tuỳ chọn)";
+      if (translation) {
+        meaningInput.value = translation;
+        setStatus("Bản dịch bạn vừa xem — sửa / xoá tuỳ ý");
+      } else if (foreignLong) {
+        addTrBtn.style.display = "";
+      }
+      setType(selectedType); // cập nhật nhãn ô nhập
+      addTrBtn.onclick = () => {
+        addTrBtn.disabled = true;
+        setStatus("⏳ Đang dịch…", "loading");
+        translateFull(term, "vi").then(tr => {
+          if (!card.isConnected) return;
+          addTrBtn.style.display = "none";
+          if (isRealTranslation(term, tr)) {
+            translation = tr;
+            const cur = meaningInput.value.trim();
+            meaningInput.value = cur ? cur + "\n\n" + tr : tr;
+            dirty = true;
+            grow();
+            setType(selectedType);
+            setStatus("Đã thêm bản dịch tự động");
+          } else {
+            setStatus("Chưa dịch được — kiểm tra mạng", "warn");
+          }
+          positionMiniCard(card, anchorRect);
+        });
+      };
+    } else if (!translatable) {
+      meaningInput.placeholder = isVietnamese(term) ? "Ghi chú / mô tả cho mục này (tuỳ chọn)" : "Nhập nghĩa / ghi chú (tuỳ chọn)";
+    } else if (prefetchedMeaning) {
+      meaningInput.value = prefetchedMeaning;
+      setStatus("Bản dịch tự động — sửa thoải mái trước khi lưu");
+    } else if (!online) {
+      setStatus("Không có mạng — nhập nghĩa tay", "warn");
+    } else {
+      meaningInput.placeholder = "Đang dịch…";
+      setStatus("⏳ Đang dịch…", "loading");
+      pendingTranslate = autoTranslate(term, lang).then(translated => {
+        pendingTranslate = null;
+        if (!card.isConnected) return translated;
+        // Google vừa nhận diện ngôn ngữ nguồn → cập nhật badge cho đúng (es/fr/…)
+        const dl = detectedLangOf(term);
+        if (dl && dl !== lang) setLang(dl);
+        meaningInput.placeholder = "Nghĩa / ghi chú nhanh…";
+        if (isRealTranslation(term, translated)) {
+          if (!dirty) {
+            meaningInput.value = translated;
+            grow();
+            setStatus("Bản dịch tự động — sửa thoải mái trước khi lưu");
+          }
+        } else if (!dirty) {
+          setStatus("Không tìm được bản dịch — tự nhập nghĩa nếu cần");
+        }
+        positionMiniCard(card, anchorRect);
+        return translated;
+      });
     }
+    grow();
 
     // Lấy phiên âm song song (chỉ với từ/cụm ngắn)
     if (wantPhonetic) fetchPhonetic(term, lang).then(p => {
-      if (!p) return;
+      if (!p || !card.isConnected) return;
       fetchedPhonetic = p;
       const el = card.querySelector(".vn-mini-phonetic");
       el.textContent = p;
@@ -1833,60 +2126,23 @@
       positionMiniCard(card, anchorRect); // chiều cao thay đổi → đặt lại
     });
 
-    // Auto dịch — dùng bản đã dịch sẵn (preview từ nút Lưu) nếu có để hiện ngay
-    const online = typeof navigator !== "undefined" ? navigator.onLine !== false : true;
-    if (!translatable) {
-      // đã mở sẵn ô nhập ở trên — không dịch
-    } else if (prefetchedMeaning) {
-      meaningView.textContent = prefetchedMeaning;
-      meaningView.classList.remove("vn-mini-empty");
-      meaningInput.value = prefetchedMeaning;
-    } else if (!online) {
-      meaningView.textContent = "(không có mạng — bấm Sửa để nhập tay)";
-      meaningView.classList.add("vn-mini-empty");
-    } else {
-      autoTranslate(term, lang).then(translated => {
-        // Google vừa nhận diện ngôn ngữ nguồn → cập nhật badge cho đúng (es/fr/…)
-        const dl = detectedLangOf(term);
-        if (dl && dl !== lang) {
-          lang = dl;
-          const badge = card.querySelector(".vn-mini-lang");
-          if (badge) badge.textContent = lang.toUpperCase();
-        }
-        if (isRealTranslation(term, translated)) {
-          meaningView.textContent = translated;
-          meaningView.classList.remove("vn-mini-empty");
-          meaningInput.value = translated;
-        } else {
-          // Không dịch được (viết tắt, tên riêng, từ Việt không dấu…) → mở sẵn ô
-          // nhập trống như trường hợp email/số.
-          meaningInput.value = "";
-          if (!isEditing) toggleEdit();
-        }
-        positionMiniCard(card, anchorRect);
-      });
-    }
+    // Định vị sát selection nếu có, fallback góc dưới phải
+    positionMiniCard(card, anchorRect);
+    try { meaningInput.focus({ preventScroll: true }); } catch (e) { meaningInput.focus(); }
+    try { meaningInput.setSelectionRange(meaningInput.value.length, meaningInput.value.length); } catch (e) {}
 
-    function toggleEdit() {
-      isEditing = !isEditing;
-      if (isEditing) {
-        meaningView.style.display = "none";
-        editArea.style.display = "block";
-        editBtn.textContent = "👁 Xem";
-        meaningInput.focus();
-        meaningInput.select();
-      } else {
-        const v = meaningInput.value.trim();
-        meaningView.textContent = v || "(chưa có nghĩa)";
-        meaningView.classList.toggle("vn-mini-empty", !v);
-        meaningView.style.display = "block";
-        editArea.style.display = "none";
-        editBtn.textContent = "✏ Sửa";
+    let saving = false;
+    async function doSave() {
+      if (saving) return;
+      saving = true;
+      saveBtn.disabled = true;
+      let meaning = meaningInput.value.trim();
+      // Bấm Enter khi bản dịch chưa về → chờ thêm chút thay vì lưu nghĩa rỗng.
+      if (!meaning && !dirty && pendingTranslate) {
+        setStatus("⏳ Đang chờ bản dịch…", "loading");
+        const tr = await Promise.race([pendingTranslate, new Promise(r => setTimeout(() => r(""), 2500))]);
+        if (isRealTranslation(term, tr)) meaning = tr;
       }
-    }
-
-    function doSave() {
-      const meaning = meaningInput.value.trim();
       const note = noteInput.value.trim();
       const tags = vnParseTags(tagsInput.value);
       const newWord = {
@@ -1899,7 +2155,7 @@
         note: note,
         tags: tags.length ? tags : undefined,
         hoverCount: 0,
-        autoDeleteAt: settings.defaultThreshold,
+        autoDeleteAt: settings.defaultThreshold || 20,
         createdAt: new Date().toISOString()
       };
       // Đoạn dài lưu từ 1 trang cụ thể → neo lại trên trang đó khi quay lại.
@@ -1913,7 +2169,7 @@
       // Atomic add: tránh ghi đè khi nhiều tab cùng thêm
       chrome.storage.local.get("words", (data) => {
         const arr = data.words || [];
-        if (arr.some(x => x.term.toLowerCase() === newWord.term.toLowerCase())) {
+        if (arr.some(x => !x.sticky && keyOf(x.term) === keyOf(newWord.term))) {
           closeCard();
           showToast(`"${newWord.term}" đã có rồi`, { warn: true });
           return;
@@ -1921,7 +2177,9 @@
         arr.push(newWord);
         chrome.storage.local.set({ words: arr }, () => {
           closeCard();
-          showToast(`Đã lưu "${newWord.term}"`); // tôn trọng cài đặt tắt toast
+          showToast(`Đã lưu "${newWord.term.length > 40 ? newWord.term.slice(0, 40) + "…" : newWord.term}"`, {
+            actions: [{ label: "Hoàn tác", onClick: () => removeById(newWord.id) }]
+          });
         });
         // storage.onChanged sẽ tự rebuildIndex + rescan
       });
@@ -1935,31 +2193,47 @@
     function onOutsideClick(ev) {
       if (!card.isConnected) { document.removeEventListener("mousedown", onOutsideClick, true); return; }
       if (card.contains(ev.target)) return;
+      // Đã gõ dở thì giữ thẻ lại (đóng bằng Esc / ✕) — tránh mất chữ vì lỡ tay bấm ra ngoài.
+      if (dirty || noteInput.value.trim() || tagsInput.value.trim()) return;
       closeCard();
     }
     // Trì hoãn 1 nhịp để không bắt ngay chính cú click vừa mở card
     setTimeout(() => document.addEventListener("mousedown", onOutsideClick, true), 0);
 
-    editBtn.onclick = toggleEdit;
     saveBtn.onclick = doSave;
-    closeBtn.onclick = closeCard;
+    card.querySelector(".vn-mini-x").onclick = closeCard;
 
-    [meaningInput, noteInput, tagsInput].forEach(inp => {
-      inp.addEventListener("keydown", (e) => {
-        // Bỏ qua khi đang gõ IME (fcitx5, unikey…)
-        if (e.isComposing || e.keyCode === 229) return;
-        if (e.key === "Enter") doSave();
-        if (e.key === "Escape") closeCard();
-      });
+    card.addEventListener("keydown", (e) => {
+      // Bỏ qua khi đang gõ IME (fcitx5, unikey…)
+      if (e.isComposing || e.keyCode === 229) return;
+      e.stopPropagation(); // không để phím tắt của trang (vd YouTube, Gmail) bắt nhầm
+      if (e.key === "Escape") { e.preventDefault(); closeCard(); return; }
+      if (e.key === "Enter" && !e.shiftKey && (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT")) {
+        e.preventDefault();
+        doSave();
+      }
+    });
+    card.addEventListener("keyup", (e) => e.stopPropagation());
+    card.addEventListener("keypress", (e) => e.stopPropagation());
+  }
+
+  // Xoá 1 mục theo id (không toast) — dùng cho "Hoàn tác" sau khi lưu.
+  function removeById(id) {
+    chrome.storage.local.get("words", (d) => {
+      const arr = (d.words || []).filter(x => x.id !== id);
+      chrome.storage.local.set({ words: arr });
     });
   }
   // Alias để giữ tương thích với message cũ
   const openAddModal = openAddMiniCard;
 
   // ---------- Message từ background / popup (gộp 1 listener) ----------
-  chrome.runtime.onMessage.addListener((msg) => {
-    if (!msg || !msg.type) return;
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (!msg || !msg.type || superseded) return;
     switch (msg.type) {
+      case "GET_PAGE_ITEMS":
+        sendResponse({ ids: pageItemIds(), host: location.hostname });
+        return;
       case "PROMPT_ADD_WORD":
         openAddModal(msg.term, null, "", currentSelectionAnchor(msg.term));
         break;
@@ -1968,6 +2242,15 @@
         if (!sel) showToast("Bôi đen từ/đoạn cần lưu rồi bấm Alt+Shift+H", { warn: true });
         else if (sel.length > 2000) showToast("Đoạn quá dài (tối đa 2000 ký tự)", { warn: true });
         else openAddModal(sel, null, "", currentSelectionAnchor(sel));
+        break;
+      }
+      // Alt+Shift+D / chuột phải → "Dịch": chỉ xem bản dịch, không lưu.
+      case "TRANSLATE_SELECTION":
+      case "PROMPT_TRANSLATE": {
+        const g = grabSelection(msg.type === "PROMPT_TRANSLATE" ? msg.term : "");
+        if (!g.text) showToast("Bôi đen chữ cần dịch rồi bấm Alt+Shift+D", { warn: true });
+        else if (g.text.length > SEL_MAX) showToast("Đoạn quá dài để dịch (tối đa 5000 ký tự)", { warn: true });
+        else { hideSelBtn(); openTranslateCard(g.text, g.rect, g.anchorCtx); }
         break;
       }
       case "FORCE_RESCAN":
@@ -1994,6 +2277,7 @@
       if (settings.enabled === false || settings.showSelButton === false) hideSelBtn();
       // Áp ngay màu/kiểu/độ dày highlight (kể cả khi không đổi danh sách từ)
       applyHighlightVars();
+      learningOn = self.HN_CONST.reviewState(words, settings).eligible; // bật/tắt chế độ học từ
       // Kiểm tra blacklist trang hiện tại
       if (isHostBlacklisted()) {
         hideSelBtn();
@@ -2025,9 +2309,19 @@
   });
 
   function isHostBlacklisted() {
-    const list = settings.blacklistedHosts || [];
-    const host = location.hostname;
-    return list.some(h => host === h || host.endsWith("." + h));
+    return self.HN_CONST.hostBlocked(location.hostname, settings.blacklistedHosts);
+  }
+
+  // Popup / Side Panel hỏi: trang này đang hiện những mục nào? (để lọc "Trang này")
+  function pageItemIds() {
+    const ids = new Set();
+    document.querySelectorAll(".vocab-note-highlight").forEach(el => {
+      if (el.dataset.anchorId) { ids.add(el.dataset.anchorId); return; }
+      const w = wordMap.get(el.dataset.term);
+      if (w) ids.add(w.id);
+    });
+    for (const w of getPageStickyItems()) ids.add(w.id);
+    return [...ids];
   }
 
   // ---------- MutationObserver cho SPA ----------

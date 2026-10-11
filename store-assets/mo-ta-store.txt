@@ -1,0 +1,44 @@
+Đọc web bằng tiếng Anh — hay bất kỳ thứ tiếng nào — mà hiểu ngay, nhớ lâu.
+
+Bôi đen một từ hoặc cả đoạn: bấm DỊCH để xem nghĩa tức thì, hoặc bấm LƯU để Highlight Note tô sáng nó ở mọi trang bạn đọc sau này. Rê chuột lên là thấy lại nghĩa, phiên âm và ghi chú của bạn.
+
+━━━━━━━━━━━━━━━━━━━━
+
+✦ DỊCH NGAY TRÊN TRANG
+• Bôi đen là hiện thanh nhỏ: Dịch · Lưu · Phát âm · Sao chép
+• Thẻ dịch dễ đọc cho cả đoạn văn dài (tới 5.000 ký tự)
+• Từ đơn tiếng Anh có phiên âm IPA, phát âm và link từ điển
+• Tự nhận ngôn ngữ nguồn; chữ tiếng Việt thì dịch sang tiếng Anh
+• Phím tắt: Alt+Shift+D để dịch, Alt+Shift+H để lưu
+
+✦ TÔ SÁNG & GHI NHỚ
+• Từ đã lưu tự được tô sáng mỗi khi gặp lại, trên mọi trang web
+• Đoạn văn dài được neo đúng trang gốc — mở lại là thấy ngay chỗ đã đánh dấu
+• 5 loại, 5 màu: Từ vựng · Quan trọng · Cần làm · Câu hỏi · Tư liệu
+• Dán ghi chú lên trang, gắn tag theo dự án hay chủ đề
+• 4 kiểu tô: gạch chân, bút dạ quang, lượn sóng, khung viền
+
+✦ QUẢN LÝ GỌN GÀNG
+• Popup tìm nhanh, lọc theo loại, theo tag, hoặc chỉ các mục trên trang đang xem
+• Side Panel đứng yên cạnh trang khi đọc (Alt+Shift+S)
+• Xoá có Hoàn tác; thêm nhiều mục một lúc (dán thẳng từ Excel, Google Sheets)
+• Xuất Markdown cho Obsidian, Notion; sao lưu ra file JSON, tự sao lưu hằng tuần
+
+✦ CHẾ ĐỘ HỌC TỪ (tuỳ chọn)
+• Ôn tập bằng thẻ ghi nhớ, lịch ôn tự giãn dần: 1 → 3 → 7 → 14… ngày
+• Ôn nhanh bằng phím Space · 1 · 2 · 3, nhắc khi có từ đến hạn
+• Tắt mặc định — không học thì không bị làm phiền
+
+✦ ĐỒNG BỘ AN TOÀN GIỮA CÁC MÁY
+• Qua 1 file trong Google Drive của chính bạn
+• Chỉ chạy khi bạn bấm, gộp từng mục — không bao giờ ghi đè cả danh sách
+• Sắp sửa hoặc xoá mục nào cũng hỏi trước, có nút Khôi phục
+
+✦ RIÊNG TƯ LÀ MẶC ĐỊNH
+• Dữ liệu nằm trên máy bạn. Không cần tài khoản, không quảng cáo, không theo dõi
+• Chỉ gửi đúng đoạn chữ bạn chọn tới Google Dịch / từ điển khi cần dịch
+• Google Drive dùng quyền drive.file: chỉ thấy đúng 1 file do tiện ích tạo ra
+
+━━━━━━━━━━━━━━━━━━━━
+
+Dành cho người học ngoại ngữ, sinh viên đọc tài liệu chuyên ngành, dân văn phòng đọc báo cáo tiếng Anh — và bất kỳ ai muốn hiểu nhanh, nhớ lâu khi đọc web.

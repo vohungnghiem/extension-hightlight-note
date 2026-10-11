@@ -4,13 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Privacy Policy – Highlight Note</title>
-  <script>
-    // Pre-paint: đặt data-theme theo hệ thống ngay để tránh nháy sáng→tối.
-    try {
-      var __dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.setAttribute("data-theme", __dark ? "dark" : "light");
-    } catch (e) {}
-  </script>
   <style>
     :root {
       --brand: #5b56e0;
@@ -27,7 +20,9 @@
       --radius: 16px;
       --shadow: 0 10px 30px rgba(20, 22, 40, 0.12);
     }
-    html[data-theme="dark"] {
+    /* Giao diện tối theo hệ thống — CSS thuần, không cần script (script nội tuyến bị CSP
+       của extension chặn; trang này cũng được đặt công khai trên web). */
+    @media (prefers-color-scheme: dark) { :root {
       --brand: #8b87f5;
       --brand-strong: #a5a1ff;
       --brand-weak: #262a45;
@@ -40,7 +35,7 @@
       --line: #2c2f3e;
       --code: #23273a;
       --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    }
+    } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -91,7 +86,7 @@
     <div class="hero">
       <img src="icons/icon128.png" alt="Highlight Note" />
       <h1>Chính sách quyền riêng tư</h1>
-      <p class="muted">Highlight Note · Last updated July 15, 2026 · Cập nhật 15/07/2026</p>
+      <p class="muted">Highlight Note · Last updated October 11, 2026 · Cập nhật 11/10/2026</p>
     </div>
 
     <div class="card">
@@ -109,26 +104,26 @@
         <li>Your settings (highlight color, language, review thresholds, blacklisted sites, etc.).</li>
       </ul>
       <p>This data is <strong>never sent to us</strong> and we do not have any server that collects it.</p>
-      <p>By default the extension uses <strong>Chrome Sync</strong> (<code>chrome.storage.sync</code>) so your list follows you across devices where you are signed in to the same Chrome/Google account. This uses Google's own sync infrastructure — <strong>not our servers</strong> — and is subject to Google's privacy policy. You can turn syncing off in <em>Settings → Account sync</em>; everything then stays on your device only.</p>
+      <p>Data stays on your device. Nothing is synced in the background: data only leaves your device when <strong>you</strong> click <em>Sync</em> (to your own Google Drive, see section 4) or export a backup file.</p>
       <p><span class="lang">VI</span>Tiện ích lưu qua bộ nhớ trình duyệt: từ/cụm từ đã tô sáng, ghi chú, bản dịch, phiên âm; <strong>địa chỉ (URL) của trang</strong> đối với đoạn văn được tô sáng và ghi chú theo trang (để khôi phục khi bạn quay lại trang đó); và các tùy chọn của bạn. Dữ liệu này <strong>không bao giờ được gửi về cho chúng tôi</strong> và chúng tôi không có máy chủ nào thu thập nó.</p>
-      <p>Mặc định tiện ích dùng <strong>Chrome Sync</strong> (<code>chrome.storage.sync</code>) để danh sách của bạn đồng bộ giữa các máy đăng nhập cùng tài khoản Chrome/Google. Việc này chạy trên hạ tầng đồng bộ của Google — <strong>không phải máy chủ của chúng tôi</strong> — và tuân theo chính sách của Google. Bạn có thể tắt trong <em>Cài đặt → Đồng bộ tài khoản</em>; khi đó mọi dữ liệu chỉ nằm trên máy bạn.</p>
+      <p>Dữ liệu nằm trên máy bạn. Không có đồng bộ chạy ngầm: dữ liệu chỉ rời máy khi <strong>chính bạn</strong> bấm <em>Đồng bộ</em> (lên Google Drive của bạn, xem mục 4) hoặc xuất file backup.</p>
     </div>
 
     <div class="card">
       <h2>3. Third-party services · Dịch vụ bên thứ ba</h2>
       <p><span class="lang">EN</span>To provide translation and pronunciation, the text you choose may be sent to:</p>
       <ul>
-        <li><strong>Google Translate API</strong> (<code>translate.googleapis.com</code>) — to translate the text you select.</li>
+        <li><strong>Google Translate API</strong> (<code>translate.googleapis.com</code>) — to translate the text you select on a page or type into the “Add item” form.</li>
         <li><strong>Free Dictionary API</strong> (<code>dictionaryapi.dev</code>) — to fetch IPA pronunciation.</li>
       </ul>
-      <p>Only the specific text you select is sent. We do not send your browsing history or any other content.</p>
-      <p><span class="lang">VI</span>Để cung cấp tính năng dịch và phiên âm, chỉ phần văn bản bạn chọn mới được gửi tới Google Translate API và Free Dictionary API. Chúng tôi không gửi lịch sử duyệt web hay bất kỳ nội dung nào khác.</p>
+      <p>Only that specific text is sent. Translation runs when you click <em>Translate</em> or <em>Save</em>. The optional instant preview while selecting a short word or typing in the Add form can be turned off in <em>Settings → When selecting text → “Show meaning of short words”</em>. We do not send your browsing history or any other content.</p>
+      <p><span class="lang">VI</span>Để cung cấp tính năng dịch và phiên âm, chỉ phần văn bản bạn bôi đen trên trang hoặc gõ vào ô “Thêm mục” mới được gửi tới Google Translate API và Free Dictionary API. Việc dịch chạy khi bạn bấm <em>Dịch</em> hoặc <em>Lưu</em>. Phần xem trước nghĩa khi vừa bôi đen từ ngắn / khi gõ ở ô Thêm mục có thể tắt trong <em>Cài đặt → Khi bôi đen chữ → “Hiện sẵn nghĩa của từ ngắn”</em>. Chúng tôi không gửi lịch sử duyệt web hay bất kỳ nội dung nào khác.</p>
     </div>
 
     <div class="card">
       <h2>4. Google Drive sync (optional) · Đồng bộ Google Drive (tùy chọn)</h2>
-      <p><span class="lang">EN</span>If you choose to sign in with Google, the extension uses the <code>drive.file</code> scope to back up your data to <em>your own</em> Google Drive. We can only access files the extension itself creates, never your other Drive files. You can disconnect at any time. We do not store your Google account credentials.</p>
-      <p><span class="lang">VI</span>Nếu bạn chọn đăng nhập Google, tiện ích dùng quyền <code>drive.file</code> để sao lưu dữ liệu lên Google Drive <em>của chính bạn</em>. Chúng tôi chỉ truy cập được file do tiện ích tạo ra, không truy cập file khác của bạn. Bạn có thể ngắt kết nối bất cứ lúc nào. Chúng tôi không lưu thông tin đăng nhập Google của bạn.</p>
+      <p><span class="lang">EN</span>If you choose to sign in with Google, the extension uses the <code>drive.file</code> scope to keep one data file in <em>your own</em> Google Drive, updated only when you click Sync. We can only access files the extension itself creates, never your other Drive files. The extension reads your Google account email address only to show which account is connected; it stays on your device. You can disconnect at any time. We do not store your Google account credentials.</p>
+      <p><span class="lang">VI</span>Nếu bạn chọn đăng nhập Google, tiện ích dùng quyền <code>drive.file</code> để giữ 1 file dữ liệu trong Google Drive <em>của chính bạn</em>, chỉ cập nhật khi bạn bấm Đồng bộ. Chúng tôi chỉ truy cập được file do tiện ích tạo ra, không truy cập file khác của bạn. Tiện ích chỉ đọc địa chỉ email tài khoản Google để hiển thị tài khoản đang kết nối; email này chỉ nằm trên máy bạn. Bạn có thể ngắt kết nối bất cứ lúc nào. Chúng tôi không lưu thông tin đăng nhập Google của bạn.</p>
     </div>
 
     <div class="card">

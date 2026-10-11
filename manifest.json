@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0koKbln9viFewr3fftFe8GfiD7uvgfDxdwrMbE1tYddLTKun6dveNmXtiq6NF1K2eCw1p7YjeTlG6mSZkth4xI6OEmt7oUoQ/lxfzzxEeJ7aU6jVOowWd7yx8IeYcq4npKBb5uHE8khMf6S8V4h4bJyemVKN/oANPOgI4cxGM3vCsIt5NJu2wvuMmQ6AqR5qLQcxZ+1DuK3+psljy3n3r9jd4mFnk8Om4erUIn0OE9Eojvu0AkBmhkKgmF/o+KJvELAEU2qfoOS5BkrkFLJ5Niv0YbiI356z0Qc0paG8vW6hFcw7Di8FYsL/u/BBJc7maoOBPm8fZmgsdFNVuEChQQIDAQAB",
   "name": "Highlight Note",
-  "version": "1.1.1",
-  "description": "Tô sáng từ & cụm từ trên mọi trang web, ghi chú, tự dịch và ôn lại — đa ngôn ngữ, lưu cục bộ, không theo dõi.",
+  "version": "1.2.0",
+  "description": "Bôi đen để dịch nhanh, lưu & tô sáng từ, đoạn văn trên mọi trang web — ghi chú, ôn tập, đồng bộ Google Drive.",
   "permissions": [
     "storage",
     "contextMenus",
@@ -39,7 +39,13 @@
       "suggested_key": {
         "default": "Alt+Shift+H"
       },
-      "description": "Tô sáng & lưu phần đang bôi đen vào Highlight Note"
+      "description": "Lưu & tô sáng phần đang bôi đen"
+    },
+    "translate-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
+      "description": "Dịch phần đang bôi đen (chỉ xem, không lưu)"
     },
     "open-side-panel": {
       "suggested_key": {

@@ -4,566 +4,440 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Highlight Note – Cài đặt</title>
-  <script>
-    // Pre-paint: đặt data-theme theo hệ thống ngay để tránh nháy sáng→tối.
-    // options.js chỉnh lại nếu người dùng đã chọn cố định Sáng/Tối.
-    try {
-      var __dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.setAttribute("data-theme", __dark ? "dark" : "light");
-    } catch (e) {}
-  </script>
+  <script src="theme-init.js"></script>
   <style>
     :root {
-      --brand: #5b56e0;
-      --brand-strong: #4338ca;
-      --brand-ink: #3730a3;
-      --brand-weak: #eef0ff;
-      --accent: #fbbf24;
-      --ink: #1f2230;
-      --ink-soft: #555a6b;
-      --ink-faint: #8b90a0;
-      --bg: #f6f7fb;
-      --surface: #fff;
-      --line: #e8eaf1;
-      --danger: #e11d48;
-      --ok: #16a34a;
-      --radius: 12px;
-      --ring: 0 0 0 3px rgba(91, 86, 224, 0.18);
+      --brand: #5b56e0; --brand-strong: #4338ca; --brand-ink: #3730a3; --brand-weak: #eef0ff;
+      --ink: #1f2230; --ink-soft: #555a6b; --ink-faint: #8b90a0;
+      --bg: #f5f6fa; --surface: #fff; --line: #e8eaf1; --field: #f7f8fc;
+      --danger: #e11d48; --ok: #16a34a;
+      --ring: 0 0 0 3px rgba(91, 86, 224, 0.2);
     }
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 32px 20px 60px;
-      color: var(--ink);
-      background: var(--bg);
-      font-size: 14px;
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-    }
-    .brand-head {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 8px;
-    }
-    .brand-head img { width: 44px; height: 44px; border-radius: 11px; box-shadow: 0 2px 8px rgba(67,56,202,0.25); }
-    .brand-head h1 { font-size: 22px; margin: 0; color: var(--brand-ink); font-weight: 800; letter-spacing: 0.2px; }
-    .brand-head p { margin: 2px 0 0; font-size: 12.5px; color: var(--ink-faint); }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 20px 22px;
-      margin-top: 18px;
-      box-shadow: 0 1px 2px rgba(20,22,40,0.05);
-    }
-    .card-title {
-      font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px;
-      color: var(--ink-faint); font-weight: 700; margin: 0 0 14px;
-    }
-    .row { margin-bottom: 20px; }
-    .row:last-child { margin-bottom: 0; }
-    label { display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink); }
-    input[type=number], input[type=color] {
-      padding: 8px 10px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      font-size: 14px;
-      background: #fbfcfe;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    select {
-      width: 100%;
-      padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px;
-      font-size: 14px; font-weight: 600; color: var(--ink);
-      background: #fbfcfe; cursor: pointer;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    select:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); background: #fff; }
-    input[type=number] { width: 120px; }
-    input[type=color] { width: 52px; height: 38px; padding: 4px; cursor: pointer; }
-    input:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); background: #fff; }
-    .check { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
-    .check input { width: 16px; height: 16px; accent-color: var(--brand); }
-    .subopts {
-      margin-top: 12px; padding-left: 18px;
-      border-left: 2px solid var(--line);
-      display: flex; flex-direction: column; gap: 11px;
-    }
-    .hint { color: var(--ink-faint); font-size: 12.5px; margin-top: 6px; }
-    textarea {
-      width: 100%; padding: 10px; border: 1px solid var(--line);
-      border-radius: 8px; font-family: "SF Mono", Menlo, Consolas, monospace;
-      font-size: 13px; background: #fbfcfe; resize: vertical;
-    }
-    button {
-      padding: 10px 20px;
-      background: var(--brand);
-      color: #fff; border: none; border-radius: 8px;
-      cursor: pointer; font-size: 14px; font-weight: 600;
-      transition: background 0.15s, transform 0.05s;
-    }
-    button:hover { background: var(--brand-strong); }
-    button:active { transform: translateY(1px); }
-    .danger { background: var(--danger); }
-    .danger:hover { background: #be123c; }
-    .card.danger-zone { border-color: #fecdd6; background: #fff7f8; }
-    .card.danger-zone .card-title { color: var(--danger); }
-
-    /* Đồng bộ */
-    .sync-state { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 4px; }
-    .badge { font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
-    .badge.sync { background: var(--brand-weak); color: var(--brand-ink); }
-    .badge.drive { background: #e7f6ec; color: #15803d; }
-    .badge.off { background: #f1f2f6; color: var(--ink-faint); }
-    .meter { height: 7px; background: #eef0f5; border-radius: 999px; overflow: hidden; margin: 7px 0 4px; }
-    .meter > i { display: block; height: 100%; background: var(--brand); transition: width 0.3s; }
-    .meter.warn > i { background: var(--accent); }
-    .meter.full > i { background: var(--danger); }
-    .drive-warn {
-      color: #9f1239; font-weight: 600; font-size: 13px;
-      background: #fff1f2; border: 1px solid #fecdd3; border-radius: 9px; padding: 10px 12px;
-    }
-
-    /* Nhóm nút có nhãn để khỏi nhầm cái nào của cái nào */
-    .action-group { margin-top: 18px; }
-    .action-label {
-      display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
-      color: var(--ink-faint); font-weight: 700; margin-bottom: 8px;
-    }
-    /* Nút trong khu đồng bộ: to, cân đối, có icon canh giữa */
-    .sync-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .sync-actions button {
-      flex: 1 1 auto; min-width: 150px;
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 11px 16px; border-radius: 9px;
-    }
-    /* Phân màu theo vai trò */
-    .btn-soft { background: var(--brand-weak); color: var(--brand-ink); }
-    .btn-soft:hover { background: #e2e4ff; }
-    .btn-outline { background: #fff; color: var(--brand-ink); border: 1px solid var(--brand); }
-    .btn-outline:hover { background: var(--brand-weak); }
-    .btn-danger-soft { background: #fff1f3; color: var(--danger); border: 1px solid #fecdd6; }
-    .btn-danger-soft:hover { background: #ffe4e8; }
-    /* Nút chính nổi bật khi CHƯA kết nối Drive (việc nên làm nhất) */
-    .cta-primary {
-      background: var(--brand) !important; color: #fff !important; border: none !important;
-      flex-basis: 100% !important; font-size: 15px; padding: 13px 18px !important;
-      box-shadow: 0 6px 16px rgba(91,86,224,0.32);
-    }
-    .cta-primary:hover { background: var(--brand-strong) !important; }
-
-    /* Bảng trạng thái thân thiện — đổi màu theo mức an toàn */
-    .status-box {
-      margin-top: 16px; border: 1px solid var(--line); border-left: 4px solid var(--line);
-      border-radius: 10px; background: #fbfcff; padding: 14px 16px;
-      transition: background 0.2s, border-color 0.2s;
-    }
-    .status-box.safe { background: #f0fdf4; border-color: #bbf7d0; border-left-color: var(--ok); }
-    .status-box.warn-state { background: #fffbeb; border-color: #fde68a; border-left-color: var(--accent); }
-    .status-box.off-state { background: #f8f9fc; border-color: var(--line); border-left-color: #cbd0db; }
-    .status-line { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; }
-    .status-line + .status-line { border-top: 1px dashed rgba(0,0,0,0.08); }
-    .status-line:first-child .status-main { font-size: 15px; }
-    .status-ico { font-size: 19px; width: 24px; text-align: center; flex: none; line-height: 1.4; }
-    .status-main { font-weight: 700; color: var(--ink); }
-    .status-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
-    .dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: #cfd3df; margin-top: 5px; }
-    .dot.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(22,163,74,0.15); }
-    .dot.off { background: #cbd0db; }
-    .dot.warn { background: var(--danger); box-shadow: 0 0 0 3px rgba(225,29,72,0.15); }
-
-    /* Tiêu đề vùng — tách các khu lớn cho dễ nhìn */
-    .section-head {
-      margin: 34px 4px 0; font-size: 13px; font-weight: 800; color: var(--brand-ink);
-      letter-spacing: 0.3px; display: flex; align-items: center; gap: 10px; text-transform: uppercase;
-    }
-    .section-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
-
-    /* Chip "Tự động lưu" nổi góc dưới — phản hồi tức thì khi chỉnh cài đặt */
-    .autosave-pill {
-      position: fixed; right: 18px; bottom: 18px;
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--surface); border: 1px solid var(--line);
-      border-radius: 999px; padding: 9px 16px;
-      box-shadow: 0 6px 20px rgba(20,22,40,0.14);
-      font-size: 13px; font-weight: 700; color: var(--ink-faint);
-      z-index: 50; transition: color .2s, background .2s, border-color .2s, transform .2s;
-    }
-    .autosave-pill .ap-ico { font-size: 14px; line-height: 1; }
-    .autosave-pill.saving { color: var(--brand-ink); border-color: var(--brand); }
-    .autosave-pill.saved { color: var(--ok); border-color: #bbf7d0; background: #f0fdf4; transform: translateY(-2px); }
-    @keyframes ap-spin { to { transform: rotate(360deg); } }
-    .autosave-pill.saving .ap-ico { display: inline-block; animation: ap-spin .7s linear infinite; }
-
-    /* Ghi chú tự động lưu thay cho nút Lưu cũ */
-    .autosave-note .autosave-inline { display: flex; align-items: flex-start; gap: 12px; }
-    .autosave-note .an-ico {
-      width: 30px; height: 30px; flex: none; border-radius: 50%;
-      background: #f0fdf4; color: var(--ok); display: flex; align-items: center; justify-content: center;
-      font-size: 16px; font-weight: 800;
-    }
-    .autosave-note .an-title { font-weight: 800; color: var(--ink); margin-bottom: 2px; }
-
-    /* Thanh trượt độ dày */
-    input[type=range] { width: 100%; max-width: 280px; accent-color: var(--brand); cursor: pointer; vertical-align: middle; }
-    .thick-val { font-weight: 700; color: var(--brand-ink); font-size: 12.5px; margin-left: 6px; }
-
-    /* Ô xem trước highlight — mô phỏng đúng cách hiển thị trên web */
-    .hl-preview {
-      padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px;
-      background: #fff; font-size: 16px; line-height: 2.1; color: var(--ink);
-    }
-    .hl-preview .vocab-note-highlight {
-      border-bottom: var(--vocab-thickness, 2px) dotted var(--vocab-color, #ffeb3b);
-      padding: 0 1px;
-    }
-    .hl-preview .vocab-note-highlight[data-level="warm"] { border-bottom-style: dashed; }
-    .hl-preview .vocab-note-highlight[data-level="hot"]  { border-bottom-style: solid; opacity: .85; }
-    .hl-preview[data-vocab-style="background"] .vocab-note-highlight {
-      border-bottom: none; background: var(--vocab-color); color: var(--vocab-text-color, #000);
-      border-radius: 3px; padding: 0 3px;
-    }
-    .hl-preview[data-vocab-style="background"] .vocab-note-highlight[data-level="warm"] { opacity: .85; }
-    .hl-preview[data-vocab-style="background"] .vocab-note-highlight[data-level="hot"]  { opacity: .6; }
-    .hl-preview[data-vocab-style="wavy"] .vocab-note-highlight {
-      border-bottom: none; text-decoration: underline; text-decoration-style: wavy;
-      text-decoration-color: var(--vocab-color); text-decoration-thickness: var(--vocab-thickness, 2px);
-      text-underline-offset: 3px;
-    }
-    .hl-preview[data-vocab-style="wavy"] .vocab-note-highlight[data-level="hot"] { opacity: .85; }
-    .hl-preview[data-vocab-style="outline"] .vocab-note-highlight {
-      border: var(--vocab-thickness, 2px) solid var(--vocab-color); border-radius: 4px; padding: 0 3px;
-    }
-    .hl-preview .pv-tag {
-      font-size: 11px; color: var(--ink-faint); font-weight: 700; margin-left: 4px;
-      vertical-align: super; text-decoration: none !important; border: none !important; opacity: .7;
-    }
-
-    /* Màu theo loại mục */
-    .type-colors { display: flex; flex-direction: column; gap: 12px; }
-    .type-color-row {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 12px; padding: 4px 0;
-    }
-    .tc-label { font-weight: 700; display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
-    .tc-ico { display: inline-flex; color: var(--ink-faint); }
-    .tc-ico svg { width: 17px; height: 17px; display: block; }
-    /* Preview nhỏ theo loại — dùng lại cơ chế màu/kiểu của .hl-preview */
-    .tc-preview { margin-left: auto; font-size: 14px; color: var(--ink); white-space: nowrap; }
-    .tc-preview .vocab-note-highlight {
-      border-bottom: var(--vocab-thickness, 2px) solid var(--vocab-color, #ffeb3b); padding: 0 1px;
-    }
-    .tc-preview[data-vocab-style="background"] .vocab-note-highlight {
-      border-bottom: none; background: var(--vocab-color); color: var(--vocab-text-color, #000);
-      border-radius: 3px; padding: 0 4px;
-    }
-    .tc-preview[data-vocab-style="wavy"] .vocab-note-highlight {
-      border-bottom: none; text-decoration: underline; text-decoration-style: wavy;
-      text-decoration-color: var(--vocab-color); text-decoration-thickness: var(--vocab-thickness, 2px);
-      text-underline-offset: 3px;
-    }
-    .tc-preview[data-vocab-style="outline"] .vocab-note-highlight {
-      border: var(--vocab-thickness, 2px) solid var(--vocab-color); border-radius: 4px; padding: 0 4px;
-    }
-
-    /* ===== DARK MODE (html[data-theme="dark"] do options.js đặt) ===== */
     html[data-theme="dark"] {
       --brand: #8b87f5; --brand-strong: #a5a1ff; --brand-ink: #c6c3fb; --brand-weak: #262a45;
-      --accent: #fbbf24; --ink: #e6e7ef; --ink-soft: #adb1c2; --ink-faint: #7b8093;
-      --bg: #12131a; --surface: #1b1d27; --line: #2c2f3e;
-      --danger: #fb7185; --ok: #4ade80; --ring: 0 0 0 3px rgba(139,135,245,0.32);
+      --ink: #e6e7ef; --ink-soft: #adb1c2; --ink-faint: #7b8093;
+      --bg: #12131a; --surface: #1b1d27; --line: #2c2f3e; --field: #14161f;
+      --danger: #fb7185; --ok: #4ade80; --ring: 0 0 0 3px rgba(139, 135, 245, 0.35);
     }
-    html[data-theme="dark"] input[type=number],
-    html[data-theme="dark"] input[type=color],
-    html[data-theme="dark"] select,
-    html[data-theme="dark"] textarea { background: #14161f; color: var(--ink); }
-    html[data-theme="dark"] input:focus,
-    html[data-theme="dark"] textarea:focus,
-    html[data-theme="dark"] select:focus { background: var(--surface); }
-    html[data-theme="dark"] textarea::placeholder { color: var(--ink-faint); }
-    html[data-theme="dark"] .hl-preview { background: var(--surface); }
-    html[data-theme="dark"] .card.danger-zone { border-color: #5c2233; background: #241318; }
-    html[data-theme="dark"] .card.danger-zone .card-title { color: #fb7185; }
-    html[data-theme="dark"] .danger { background: #b93a4f; }
-    html[data-theme="dark"] .danger:hover { background: #a3283c; }
-    html[data-theme="dark"] .badge.drive { background: #14261c; color: #7ee0a3; }
-    html[data-theme="dark"] .badge.off { background: #23252f; color: var(--ink-faint); }
-    html[data-theme="dark"] .meter { background: #23252f; }
-    html[data-theme="dark"] .drive-warn { color: #ff9aae; background: #2c1620; border-color: #5c2233; }
-    html[data-theme="dark"] .btn-soft:hover { background: #33375c; }
-    html[data-theme="dark"] .btn-outline { background: var(--surface); color: var(--brand-ink); border-color: var(--brand); }
-    html[data-theme="dark"] .btn-outline:hover { background: var(--brand-weak); }
-    html[data-theme="dark"] .btn-danger-soft { background: #2c1620; color: #ff9aae; border-color: #5c2233; }
-    html[data-theme="dark"] .btn-danger-soft:hover { background: #3a1c28; }
-    html[data-theme="dark"] .status-box { background: #171922; border-color: var(--line); }
-    html[data-theme="dark"] .status-box.safe { background: #14261c; border-color: #1f5136; border-left-color: var(--ok); }
-    html[data-theme="dark"] .status-box.warn-state { background: #2a2412; border-color: #4a3c18; border-left-color: var(--accent); }
-    html[data-theme="dark"] .status-box.off-state { background: #191b24; border-color: var(--line); border-left-color: #3a3d4d; }
-    html[data-theme="dark"] .status-line + .status-line { border-top-color: rgba(255,255,255,0.08); }
-    html[data-theme="dark"] .dot { background: #3a3d4d; }
-    html[data-theme="dark"] .dot.off { background: #3a3d4d; }
-    html[data-theme="dark"] .autosave-pill.saved { background: #14261c; border-color: #1f5136; }
-    html[data-theme="dark"] .autosave-note .an-ico { background: #14261c; color: #7ee0a3; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font: 14px/1.5 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; color: inherit; }
+    a { color: var(--brand); }
+    code { background: var(--brand-weak); color: var(--brand-ink); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+    kbd {
+      font-family: inherit; font-size: 12px; font-weight: 700; background: var(--surface); color: var(--ink);
+      border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px;
+    }
+
+    /* ===== Bố cục: menu trái + nội dung ===== */
+    .layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); max-width: 1000px; margin: 0 auto; min-height: 100vh; }
+    .side { position: sticky; top: 0; height: 100vh; padding: 26px 14px; border-right: 1px solid var(--line); }
+    .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 22px; }
+    .brand img { width: 34px; height: 34px; border-radius: 9px; }
+    .brand b { font-size: 16px; color: var(--brand-ink); display: block; line-height: 1.2; }
+    .brand small { color: var(--ink-faint); font-size: 12px; }
+    .nav { display: flex; flex-direction: column; gap: 2px; }
+    .nav button {
+      display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px;
+      border: none; border-radius: 10px; background: none; cursor: pointer;
+      color: var(--ink-soft); font-weight: 600; text-align: left;
+    }
+    .nav button svg { width: 17px; height: 17px; flex-shrink: 0; }
+    .nav button:hover { background: var(--surface); color: var(--ink); }
+    .nav button.active { background: var(--brand-weak); color: var(--brand-ink); }
+    .nav button:focus-visible { outline: none; box-shadow: var(--ring); }
+    .side-foot { position: absolute; left: 22px; bottom: 22px; font-size: 12px; color: var(--ink-faint); }
+    .side-foot a { color: var(--ink-faint); }
+    main { padding: 34px 40px 90px; max-width: 720px; }
+
+    @media (max-width: 760px) {
+      .layout { grid-template-columns: 1fr; }
+      .side { position: sticky; top: 0; z-index: 10; height: auto; padding: 8px 10px; border-right: none; border-bottom: 1px solid var(--line); background: var(--bg); }
+      .brand, .side-foot { display: none; }
+      .nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
+      .nav button { width: auto; white-space: nowrap; }
+      main { padding: 20px 16px 80px; }
+    }
+
+    /* ===== Khu & dòng cài đặt ===== */
+    h2 { font-size: 22px; margin: 0 0 4px; }
+    .lead { color: var(--ink-soft); margin: 0 0 22px; }
+    h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); margin: 26px 4px 8px; }
+    .rows { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .row { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-top: 1px solid var(--line); }
+    .row:first-child { border-top: none; }
+    .row.sub { padding-left: 38px; }
+    .row.off .rt { opacity: 0.45; }
+    .rt { flex: 1; min-width: 0; }
+    .rt b { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+    .rt small { display: block; color: var(--ink-faint); font-size: 12.5px; margin-top: 2px; line-height: 1.45; }
+
+    /* Công tắc */
+    .tgl { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+    .tgl input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+    .tgl span { position: absolute; inset: 0; background: #cfd3df; border-radius: 24px; transition: background 0.15s; }
+    .tgl span::before {
+      content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+      background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.15s;
+    }
+    .tgl input:checked + span { background: var(--brand); }
+    .tgl input:checked + span::before { transform: translateX(18px); }
+    .tgl input:focus-visible + span { box-shadow: var(--ring); }
+    .tgl input:disabled { cursor: default; }
+    html[data-theme="dark"] .tgl span { background: #3a3d4d; }
+
+    input[type=number] {
+      width: 84px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px;
+      background: var(--field); text-align: center;
+    }
+    input[type=number]:focus, .text-in:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); }
+    input[type=color] {
+      width: 44px; height: 32px; padding: 3px; border: 1px solid var(--line); border-radius: 9px;
+      background: var(--surface); cursor: pointer; flex-shrink: 0;
+    }
+    input[type=range] { width: 160px; accent-color: var(--brand); }
+    .text-in { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 9px 16px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700;
+      background: var(--brand-weak); color: var(--brand-ink); white-space: nowrap; flex-shrink: 0;
+    }
+    .btn:hover { filter: brightness(0.97); }
+    .btn:disabled { opacity: 0.6; cursor: default; }
+    .btn.primary { background: var(--brand); color: #fff; }
+    .btn.primary:hover { background: var(--brand-strong); filter: none; }
+    .btn.big { width: 100%; padding: 13px; font-size: 15px; }
+    .btn.danger { background: var(--danger); color: #fff; }
+    .btn.ghost { background: var(--field); color: var(--ink-soft); border: 1px solid var(--line); }
+    .btn:focus-visible { outline: none; box-shadow: var(--ring); }
+    .link { background: none; border: none; padding: 0; color: var(--brand); font-weight: 700; cursor: pointer; }
+    .link.danger { color: var(--danger); }
+
+    /* ===== Xem trước tô sáng ===== */
+    .pv { --th: 2px; }
+    .pv .hl { --c: var(--c-vocab); --tc: var(--tc-vocab); padding: 0 2px; }
+    .pv .hl[data-t="important"] { --c: var(--c-important); --tc: var(--tc-important); }
+    .pv .hl[data-t="todo"]      { --c: var(--c-todo);      --tc: var(--tc-todo); }
+    .pv .hl[data-t="question"]  { --c: var(--c-question);  --tc: var(--tc-question); }
+    .pv .hl[data-t="reference"] { --c: var(--c-reference); --tc: var(--tc-reference); }
+    .pv[data-style="underline"] .hl { border-bottom: var(--th) dotted var(--c); }
+    .pv[data-style="underline"] .hl[data-l="warm"] { border-bottom-style: dashed; }
+    .pv[data-style="underline"] .hl[data-l="hot"] { border-bottom-style: solid; opacity: 0.85; }
+    .pv[data-style="background"] .hl { background: var(--c); color: var(--tc); border-radius: 3px; }
+    .pv[data-style="background"] .hl[data-l="warm"] { opacity: 0.85; }
+    .pv[data-style="background"] .hl[data-l="hot"] { opacity: 0.6; }
+    .pv[data-style="wavy"] .hl { text-decoration: underline wavy var(--c); text-decoration-thickness: var(--th); text-underline-offset: 3px; }
+    .pv[data-style="outline"] .hl { border: var(--th) solid var(--c); border-radius: 4px; padding: 0 3px; }
+    .preview { padding: 18px 20px; font-size: 15.5px; line-height: 2.2; }
+    .preview p { margin: 0; }
+    .preview p + p { margin-top: 4px; }
+    /* Nhãn nhỏ vẽ bằng CSS (::before) → không bị dính vào chữ khi bôi đen / copy câu ví dụ */
+    .preview .lv::before { content: attr(data-tag); font-size: 10.5px; color: var(--ink-faint); font-weight: 700; vertical-align: super; margin-left: 2px; user-select: none; }
+
+    .style-picks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px 18px; }
+    .sp { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px 10px; border: 1.5px solid var(--line); border-radius: 12px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+    .sp input { position: absolute; opacity: 0; pointer-events: none; }
+    .sp .pv { font-size: 15px; color: var(--ink); }
+    .sp:hover { border-color: var(--brand); }
+    .sp:has(input:checked) { border-color: var(--brand); background: var(--brand-weak); color: var(--brand-ink); }
+    .sp:has(input:focus-visible) { box-shadow: var(--ring); }
+    @media (max-width: 520px) { .style-picks { grid-template-columns: repeat(2, 1fr); } }
+
+    .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-shrink: 0; }
+    .seg label { position: relative; padding: 7px 14px; cursor: pointer; font-weight: 600; color: var(--ink-soft); border-left: 1px solid var(--line); }
+    .seg label:first-child { border-left: none; }
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg label:has(input:checked) { background: var(--brand-weak); color: var(--brand-ink); }
+
+    /* ===== Trang web bị tắt ===== */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 18px; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: var(--field); border: 1px solid var(--line); font-weight: 600; }
+    .chip button { width: 22px; height: 22px; border-radius: 50%; border: none; background: none; cursor: pointer; color: var(--ink-faint); font-size: 16px; line-height: 1; }
+    .chip button:hover { background: rgba(225, 29, 72, 0.12); color: var(--danger); }
+    .empty-note { color: var(--ink-faint); font-size: 13px; }
+
+    /* ===== Đồng bộ ===== */
+    .how { padding: 16px 18px; color: var(--ink-soft); font-size: 13.5px; }
+    .how ul { margin: 6px 0 0; padding-left: 20px; }
+    .sync-box { padding: 16px 18px; border-top: 1px solid var(--line); }
+    .sync-ok { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; margin-bottom: 14px; }
+    html[data-theme="dark"] .sync-ok { background: #14261c; border-color: #1f5136; }
+    .sync-ok .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); margin-top: 6px; flex-shrink: 0; }
+    .sync-ok b { display: block; }
+    .sync-ok small { display: block; color: var(--ink-soft); font-size: 12.5px; }
+    .sync-ok small:empty { display: none; }
+    .sync-links { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-top: 12px; font-size: 13px; }
+    .warn-box { padding: 12px 14px; border-radius: 12px; background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
+    html[data-theme="dark"] .warn-box { background: #2c1620; border-color: #5c2233; color: #ff9aae; }
+
+    .danger-rows { border-color: #fecdd6; }
+    html[data-theme="dark"] .danger-rows { border-color: #5c2233; }
+
+    /* ===== Hộp thoại + toast ===== */
+    .dlg-overlay { position: fixed; inset: 0; z-index: 100; background: rgba(20, 22, 40, 0.45); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .dlg { background: var(--surface); border-radius: 16px; padding: 22px; width: min(460px, 100%); box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+    .dlg h4 { margin: 0 0 10px; font-size: 17px; }
+    .dlg-body { color: var(--ink-soft); line-height: 1.55; }
+    .dlg-body p { margin: 0 0 10px; }
+    .dlg-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+    .chg-list { list-style: none; margin: 0 0 10px; padding: 0; max-height: 240px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
+    .chg-list li { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-top: 1px solid var(--line); }
+    .chg-list li:first-child { border-top: none; }
+    .chg-list b { flex: 1; min-width: 0; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tag { flex-shrink: 0; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--brand-weak); color: var(--brand-ink); }
+    .tag.del { background: #fef2f2; color: #b91c1c; }
+    html[data-theme="dark"] .tag.del { background: #2c1620; color: #fca5a5; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 120; background: #2a2d3a; color: #fff; padding: 11px 18px; border-radius: 10px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.25); max-width: calc(100% - 40px); }
+    .toast.ok { background: #0f8a63; }
+    .toast.err { background: #d23c3c; }
   </style>
 </head>
 <body>
-  <div class="brand-head">
-    <img src="icons/icon128.png" alt="Highlight Note" />
-    <div>
-      <h1>Highlight Note</h1>
-      <p>Cài đặt &middot; tô sáng, ghi chú &amp; ôn lại trên web</p>
-    </div>
-  </div>
-
-  <div class="card">
-    <p class="card-title">Ôn tập &amp; tiến độ</p>
-
-    <div class="row">
-      <label class="check"><input type="checkbox" id="showReview" /> Hiện nút Ôn tập</label>
-      <div class="hint">Tắt nếu bạn chỉ dùng để tô sáng &amp; ghi chú, không cần ôn lại — nút "Ôn tập" sẽ ẩn khỏi popup.</div>
-    </div>
-
-    <div class="row">
-      <label class="check"><input type="checkbox" id="srsReminder" /> Nhắc ôn tập hằng ngày (giãn cách / SRS)</label>
-      <div class="hint">Hiện số từ <b>cần ôn hôm nay</b> lên biểu tượng tiện ích (badge) và thanh nhắc trong popup. Ôn theo phương pháp giãn cách: nhớ tốt thì lịch ôn giãn dần (1 → 3 → 7 → 14… ngày) để nhớ lâu mà đỡ tốn thời gian.</div>
-    </div>
-
-    <div class="row">
-      <label for="srsNewPerDay">Số từ mới đưa vào ôn mỗi ngày</label>
-      <input type="number" id="srsNewPerDay" min="1" max="500" value="20" />
-      <div class="hint">Giới hạn từ MỚI mỗi buổi để không quá tải. Từ đã tới hạn ôn lại KHÔNG bị giới hạn này.</div>
-    </div>
-
-    <div class="row">
-      <label for="threshold">Ngưỡng "đã thuộc" cho mục mới (số lần gặp)</label>
-      <input type="number" id="threshold" min="1" max="200" value="20" />
-      <div class="hint">Khi bạn gặp (hover) một từ đủ số lần này, extension tự đánh dấu <b>đã thuộc</b> và ngừng tô sáng từ đó. Dữ liệu KHÔNG bị xoá — từ vẫn còn trong danh sách, có thể bỏ đánh dấu bất cứ lúc nào.</div>
-    </div>
-
-    <div class="row">
-      <label for="cooldown">Cooldown đếm hover (giây)</label>
-      <input type="number" id="cooldown" min="1" max="86400" value="300" />
-      <div class="hint">Sau khi đếm 1 lần hover cho 1 mục, phải chờ bấy nhiêu giây mới được đếm lại. Mặc định 300s (5 phút) để phản ánh chính xác khả năng ghi nhớ — tránh nhảy số liên tục khi rê chuột qua lại.</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <p class="card-title">Hiển thị tô sáng</p>
-
-    <div class="row">
-      <label for="color">Màu tô sáng (highlight)</label>
-      <input type="color" id="color" value="#ffeb3b" />
-    </div>
-
-    <div class="row">
-      <label for="highlightStyle">Kiểu tô sáng</label>
-      <select id="highlightStyle">
-        <option value="underline">Gạch chân (mặc định)</option>
-        <option value="background">Tô nền (bút dạ quang)</option>
-        <option value="wavy">Gạch lượn sóng</option>
-        <option value="outline">Khung viền</option>
-      </select>
-      <div class="hint">Gạch chân đổi nét theo mức học: chấm (mới) → đứt (đang học) → liền (sắp thuộc). Các kiểu khác mờ dần khi sắp thuộc.</div>
-    </div>
-
-    <div class="row">
-      <label for="hlThickness">Độ dày nét <span class="thick-val" id="hlThicknessVal">2px</span></label>
-      <input type="range" id="hlThickness" min="1" max="5" step="1" value="2" />
-      <div class="hint">Áp dụng cho Gạch chân, Lượn sóng và Khung viền. (Kiểu Tô nền không dùng độ dày.)</div>
-    </div>
-
-    <div class="row">
-      <label>Xem trước</label>
-      <div class="hl-preview" id="hlPreview">
-        Đây là một <span class="vocab-note-highlight" data-level="new">ví dụ<span class="pv-tag">mới</span></span>
-        câu có <span class="vocab-note-highlight" data-level="warm">từ vựng<span class="pv-tag">đang học</span></span>
-        đang được <span class="vocab-note-highlight" data-level="hot">tô sáng<span class="pv-tag">sắp thuộc</span></span> theo cài đặt.
+  <div class="layout">
+    <aside class="side">
+      <div class="brand">
+        <img src="icons/icon48.png" alt="" />
+        <div><b>Highlight Note</b><small>Cài đặt · tự động lưu</small></div>
       </div>
-    </div>
+      <nav class="nav" aria-label="Các mục cài đặt">
+        <button data-sec="highlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>Tô sáng</button>
+        <button data-sec="selection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6.1H3"/><path d="M21 12.1H3"/><path d="M15.1 18H3"/></svg>Khi bôi đen chữ</button>
+        <button data-sec="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Ôn tập</button>
+        <button data-sec="sync"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H7a5 5 0 1 1 1.02-9.9A6 6 0 0 1 19.5 11 4 4 0 0 1 17.5 19z"/></svg>Đồng bộ &amp; sao lưu</button>
+        <button data-sec="sites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Trang web bị tắt</button>
+        <button data-sec="general"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Chung</button>
+      </nav>
+      <div class="side-foot"><span id="ver"></span> · <a href="privacy-policy.html" target="_blank">Quyền riêng tư</a></div>
+    </aside>
 
-    <div class="row">
-      <label class="check"><input type="checkbox" id="caseSensitive" /> Phân biệt hoa/thường</label>
-      <div class="hint">Mặc định tắt: "Apple" và "apple" coi như cùng một mục.</div>
-    </div>
+    <main>
+      <!-- ========== TÔ SÁNG ========== -->
+      <section id="sec-highlight" data-sec="highlight">
+        <h2>Tô sáng</h2>
+        <p class="lead">Cách các mục đã lưu hiện trên trang web.</p>
 
-    <div class="row">
-      <label class="check"><input type="checkbox" id="showToasts" /> Hiện thông báo nhỏ (toast)</label>
-      <div class="hint">Các thông báo góc màn hình khi lưu/sửa/xoá từ (đã gắn icon Highlight Note để khỏi nhầm với web). Tắt nếu thấy phiền — khi tắt sẽ ẩn <b>toàn bộ</b> toast (kể cả nút "Hoàn tác" khi xoá).</div>
-    </div>
-
-    <div class="row">
-      <label class="check"><input type="checkbox" id="showSelButton" /> Hiện thanh thao tác khi bôi đen</label>
-      <div class="hint">Khi bôi đen chữ trên web, hiện thanh nổi nhỏ với các nút bên dưới. Tắt cả thanh nếu thấy vướng khi đọc — vẫn lưu được bằng <b>Alt+Shift+H</b> hoặc chuột phải → "Tô sáng &amp; lưu".</div>
-      <div class="subopts">
-        <label class="check"><input type="checkbox" id="showSelSpeak" /> 🔊 Nút Phát âm</label>
-        <label class="check"><input type="checkbox" id="showSelCopy" /> 📋 Nút Sao chép</label>
-        <div>
-          <label class="check"><input type="checkbox" id="previewTranslate" /> 🌐 Dịch nhanh (xem trước nghĩa)</label>
-          <div class="hint" style="margin-top:4px">Vừa bôi đen là gọi Google Translate để hiện sẵn nghĩa trên nút Lưu. Tắt nếu không muốn gửi chữ đang chọn lên mạng cho tới khi thật sự bấm <b>Lưu</b>.</div>
+        <div class="rows">
+          <div class="preview pv" id="preview">
+            <p>It was pure <span class="hl" data-l="new">serendipity</span><span class="lv" data-tag="mới"></span>
+              that our <span class="hl" data-l="warm">resilient</span><span class="lv" data-tag="đang học"></span>
+              team found such a <span class="hl" data-l="hot">handy</span><span class="lv" data-tag="sắp thuộc"></span> tool.</p>
+            <p>Sáng mai <span class="hl" data-t="important">họp với khách hàng</span><span class="lv" data-tag="quan trọng"></span>
+              — nhớ <span class="hl" data-t="todo">gửi báo giá trước 9h</span><span class="lv" data-tag="cần làm"></span>,
+              hỏi <span class="hl" data-t="question">ai duyệt ngân sách?</span><span class="lv" data-tag="câu hỏi"></span>
+              và mang theo <span class="hl" data-t="reference">hợp đồng mẫu</span><span class="lv" data-tag="tư liệu"></span>.</p>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div class="row">
-      <label for="blacklist">Domain không tô sáng (mỗi dòng 1 domain)</label>
-      <textarea id="blacklist" rows="4" placeholder="facebook.com&#10;mail.google.com"></textarea>
-      <div class="hint">Mở popup ở trang web → nút "Tắt trên site này" sẽ thêm domain vào đây.</div>
-    </div>
-  </div>
-
-  <div class="card">
-    <p class="card-title">Màu theo loại mục</p>
-    <div class="hint" style="margin-bottom:14px">Ngoài "Từ vựng", extension còn tô sáng theo các loại phục vụ công việc: <b>Quan trọng</b>, <b>Cần làm</b>, <b>Câu hỏi</b>, <b>Tư liệu</b>. Mỗi loại một màu riêng. ("Từ vựng" dùng màu ở mục <b>Hiển thị tô sáng</b> phía trên.)</div>
-    <div class="type-colors">
-      <div class="type-color-row">
-        <span class="tc-label"><span class="tc-ico" data-type="important"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span> Quan trọng</span>
-        <span class="tc-preview" data-type="important"><span class="vocab-note-highlight">chữ mẫu</span></span>
-        <input type="color" id="colorImportant" value="#ff5a5f" />
-      </div>
-      <div class="type-color-row">
-        <span class="tc-label"><span class="tc-ico" data-type="todo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Cần làm</span>
-        <span class="tc-preview" data-type="todo"><span class="vocab-note-highlight">chữ mẫu</span></span>
-        <input type="color" id="colorTodo" value="#28c76f" />
-      </div>
-      <div class="type-color-row">
-        <span class="tc-label"><span class="tc-ico" data-type="question"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span> Câu hỏi</span>
-        <span class="tc-preview" data-type="question"><span class="vocab-note-highlight">chữ mẫu</span></span>
-        <input type="color" id="colorQuestion" value="#9b6dff" />
-      </div>
-      <div class="type-color-row">
-        <span class="tc-label"><span class="tc-ico" data-type="reference"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></span> Tư liệu</span>
-        <span class="tc-preview" data-type="reference"><span class="vocab-note-highlight">chữ mẫu</span></span>
-        <input type="color" id="colorReference" value="#00bcd4" />
-      </div>
-    </div>
-  </div>
-
-  <div class="card autosave-note">
-    <div class="autosave-inline">
-      <span class="an-ico">✓</span>
-      <div>
-        <div class="an-title">Tự động lưu — không cần bấm nút</div>
-        <div class="hint" style="margin:0">Mọi thay đổi ở <b>Ôn tập &amp; tiến độ</b>, <b>Hiển thị tô sáng</b> và <b>Domain chặn</b> được lưu ngay khi bạn chỉnh. Chip "Tự động lưu" ở góc dưới sẽ báo mỗi khi lưu xong.</div>
-      </div>
-    </div>
-  </div>
-
-  <p class="section-head">💾 Dữ liệu &amp; đồng bộ</p>
-
-  <div class="card">
-    <p class="card-title">Đồng bộ tài khoản</p>
-
-    <div class="row">
-      <label class="check"><input type="checkbox" id="syncEnabled" /> Bật đồng bộ tự động</label>
-      <div class="hint">Đồng bộ từ vựng giữa các máy. Export/Import JSON thủ công vẫn dùng được song song.</div>
-    </div>
-
-    <div class="row">
-      <label for="syncMode">Bạn muốn lưu từ vựng ở đâu?</label>
-      <select id="syncMode">
-        <option value="auto">⚡ Tự động (khuyên dùng)</option>
-        <option value="drive">☁ Luôn lưu vào Google Drive</option>
-      </select>
-      <div class="hint" id="syncModeHint">Tự động: lưu qua Tài khoản Chrome, khi đầy thì tự chuyển sang Google Drive.</div>
-    </div>
-
-    <!-- Bảng trạng thái dễ hiểu -->
-    <div class="status-box" id="syncStatusBox">
-      <div class="status-line">
-        <span class="status-ico" id="whereIco">📦</span>
-        <div>
-          <div class="status-main" id="whereTitle">Đang kiểm tra…</div>
-          <div class="status-sub" id="whereDesc"></div>
+        <h3>Kiểu</h3>
+        <div class="rows">
+          <div class="style-picks" role="radiogroup" aria-label="Kiểu tô sáng">
+            <label class="sp"><input type="radio" name="hlStyle" value="underline" /><span class="pv swatch" data-style="underline"><span class="hl" data-l="hot">Aa chữ</span></span>Gạch chân</label>
+            <label class="sp"><input type="radio" name="hlStyle" value="background" /><span class="pv swatch" data-style="background"><span class="hl">Aa chữ</span></span>Tô nền</label>
+            <label class="sp"><input type="radio" name="hlStyle" value="wavy" /><span class="pv swatch" data-style="wavy"><span class="hl">Aa chữ</span></span>Lượn sóng</label>
+            <label class="sp"><input type="radio" name="hlStyle" value="outline" /><span class="pv swatch" data-style="outline"><span class="hl">Aa chữ</span></span>Khung viền</label>
+          </div>
+          <div class="row" id="thickRow">
+            <div class="rt"><b>Độ dày nét</b></div>
+            <input type="range" id="hlThickness" min="1" max="5" step="1" value="2" aria-label="Độ dày nét" />
+            <span id="hlThicknessVal" style="width:34px;text-align:right;font-weight:700">2px</span>
+          </div>
         </div>
-      </div>
 
-      <div class="status-line">
-        <span class="status-ico"><span class="dot" id="driveDot"></span></span>
-        <div>
-          <div class="status-main" id="driveTitle">Google Drive</div>
-          <div class="status-sub" id="driveDesc"></div>
+        <h3>Màu theo loại</h3>
+        <div class="rows">
+          <div class="row"><div class="rt"><b>📚 Từ vựng</b></div><input type="color" id="color" value="#ffeb3b" aria-label="Màu Từ vựng" /></div>
+          <div class="row"><div class="rt"><b>⭐ Quan trọng</b></div><input type="color" id="colorImportant" value="#ff5a5f" aria-label="Màu Quan trọng" /></div>
+          <div class="row"><div class="rt"><b>✅ Cần làm</b></div><input type="color" id="colorTodo" value="#28c76f" aria-label="Màu Cần làm" /></div>
+          <div class="row"><div class="rt"><b>❓ Câu hỏi</b></div><input type="color" id="colorQuestion" value="#9b6dff" aria-label="Màu Câu hỏi" /></div>
+          <div class="row"><div class="rt"><b>📎 Tư liệu</b></div><input type="color" id="colorReference" value="#00bcd4" aria-label="Màu Tư liệu" /></div>
+          <div class="row"><div class="rt"><small>Đổi màu xong xem ngay ở khung phía trên.</small></div><button class="link" id="resetColorsBtn">Khôi phục màu mặc định</button></div>
         </div>
-      </div>
 
-      <div class="status-line" id="usageLine">
-        <span class="status-ico">📊</span>
-        <div style="flex:1; min-width:0">
-          <div class="status-main">Dung lượng (khi lưu qua Tài khoản Chrome)</div>
-          <div class="meter" id="syncMeter"><i style="width:0%"></i></div>
-          <div class="status-sub" id="syncUsage"></div>
+        <h3>Khác</h3>
+        <div class="rows">
+          <div class="row">
+            <div class="rt"><b>Phân biệt chữ hoa / thường</b><small>Tắt: "Apple" và "apple" được coi là một.</small></div>
+            <label class="tgl"><input type="checkbox" id="caseSensitive" /><span></span></label>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="status-sub" id="syncTime" style="margin-top:6px"></div>
-      <div class="drive-warn" id="syncWarn" style="display:none; margin-top:10px"></div>
-    </div>
+      <!-- ========== KHI BÔI ĐEN ========== -->
+      <section id="sec-selection" data-sec="selection" hidden>
+        <h2>Khi bôi đen chữ</h2>
+        <p class="lead">Thanh nhỏ hiện cạnh chữ bạn vừa bôi đen, có nút <b>Dịch</b> (chỉ xem) và <b>Lưu</b> (lưu &amp; tô sáng).</p>
+        <div class="rows">
+          <div class="row">
+            <div class="rt"><b>Hiện thanh Dịch / Lưu</b><small>Tắt nếu thấy vướng — vẫn dùng được phím tắt hoặc chuột phải.</small></div>
+            <label class="tgl"><input type="checkbox" id="showSelButton" /><span></span></label>
+          </div>
+          <div class="row sub">
+            <div class="rt"><b>Hiện sẵn nghĩa của từ ngắn</b><small>Gửi chữ đang chọn lên Google Dịch ngay khi bôi đen. Tắt thì chỉ dịch khi bạn bấm.</small></div>
+            <label class="tgl"><input type="checkbox" id="previewTranslate" /><span></span></label>
+          </div>
+          <div class="row sub">
+            <div class="rt"><b>Nút phát âm</b></div>
+            <label class="tgl"><input type="checkbox" id="showSelSpeak" /><span></span></label>
+          </div>
+          <div class="row sub">
+            <div class="rt"><b>Nút sao chép</b></div>
+            <label class="tgl"><input type="checkbox" id="showSelCopy" /><span></span></label>
+          </div>
+        </div>
+        <h3>Thông báo</h3>
+        <div class="rows">
+          <div class="row">
+            <div class="rt"><b>Thông báo nhỏ góc màn hình</b><small>Báo khi lưu / sửa / xoá, kèm nút Hoàn tác.</small></div>
+            <label class="tgl"><input type="checkbox" id="showToasts" /><span></span></label>
+          </div>
+        </div>
+      </section>
 
-    <div class="action-group">
-      <span class="action-label">🔗 Quản lý Google Drive</span>
-      <div class="sync-actions">
-        <button id="connectDriveBtn" class="btn-soft">☁ Kết nối Google Drive</button>
-        <button id="openDriveBtn" class="btn-outline" style="display:none">🔗 Xem file trên Drive</button>
-        <button id="disconnectDriveBtn" class="btn-danger-soft" style="display:none">⏏ Ngắt kết nối</button>
-      </div>
-    </div>
+      <!-- ========== ÔN TẬP ========== -->
+      <section id="sec-review" data-sec="review" hidden>
+        <h2>Ôn tập</h2>
+        <p class="lead">Dành cho người học từ vựng. <b>Tắt</b> thì im hẳn: không nút Ôn tập, không nhắc nhở, không số trên biểu tượng, không thanh tiến độ "0/20".</p>
+        <div class="rows">
+          <div class="row">
+            <div class="rt"><b>Chế độ học từ</b><small>Ôn tập bằng thẻ ghi nhớ, lịch ôn tự giãn dần (1 → 3 → 7 → 14… ngày), nhắc khi có từ đến hạn, theo dõi số lần gặp. Bật/tắt nhanh ở menu ⋯ của popup.</small></div>
+            <label class="tgl"><input type="checkbox" id="learningMode" /><span></span></label>
+          </div>
+          <div class="row sub">
+            <div class="rt"><b>Nhắc khi có từ đến hạn ôn</b><small>Số trên biểu tượng + 1 dòng nhỏ trong popup (bấm × để ẩn trong ngày). Từ mới lưu được tính từ hôm sau.</small></div>
+            <label class="tgl"><input type="checkbox" id="srsReminder" /><span></span></label>
+          </div>
+          <div class="row sub">
+            <div class="rt"><b>Số từ mới mỗi ngày</b><small>Từ đã tới hạn ôn lại không bị giới hạn.</small></div>
+            <input type="number" id="srsNewPerDay" min="1" max="500" value="20" />
+          </div>
+        </div>
+        <h3>Tự đánh dấu đã thuộc (khi bật chế độ học từ)</h3>
+        <div class="rows">
+          <div class="row">
+            <div class="rt"><b>Sau bao nhiêu lần gặp</b><small>Mỗi lần rê chuột xem nghĩa trên trang = 1 lần gặp. Đủ số lần thì ngừng tô sáng từ đó (vẫn giữ trong danh sách).</small></div>
+            <input type="number" id="threshold" min="1" max="200" value="20" />
+          </div>
+          <div class="row">
+            <div class="rt"><b>Mỗi từ tính tối đa 1 lần gặp trong (phút)</b><small>Rê chuột qua lại liên tục không bị tính nhiều lần.</small></div>
+            <input type="number" id="cooldownMin" min="1" max="1440" value="5" />
+          </div>
+        </div>
+      </section>
 
-    <div class="action-group">
-      <span class="action-label">🔄 Đồng bộ</span>
-      <div class="sync-actions">
-        <button id="syncNowBtn" class="btn-soft">🔄 Đồng bộ ngay</button>
-      </div>
-      <div class="hint" style="margin-top:8px">Bình thường <b>không cần bấm gì</b> — tự đồng bộ khi bạn thêm/sửa từ. Nút này chỉ để ép cập nhật liền.</div>
-    </div>
+      <!-- ========== ĐỒNG BỘ & SAO LƯU ========== -->
+      <section id="sec-sync" data-sec="sync" hidden>
+        <h2>Đồng bộ &amp; sao lưu</h2>
+        <p class="lead">Dùng nhiều máy, hoặc giữ dữ liệu an toàn khi cài lại.</p>
+
+        <h3>Đồng bộ qua Google Drive</h3>
+        <div class="rows">
+          <div class="how">
+            Không có gì chạy ngầm — bạn bấm <b>Đồng bộ</b> khi cần. Dữ liệu được <b>gộp từng mục</b> với 1 file trong Drive của bạn:
+            <ul>
+              <li>Mục mới ở máy nào cũng được giữ.</li>
+              <li>Nếu lần đồng bộ sắp <b>sửa hoặc xoá</b> mục nào trên máy này, bạn được xem danh sách và chọn trước.</li>
+            </ul>
+          </div>
+          <div class="sync-box">
+            <div id="syncNotConfigured" class="warn-box" hidden>Bản cài này chưa hỗ trợ Google Drive. Hãy dùng <b>Sao lưu ra file</b> bên dưới để chuyển dữ liệu giữa các máy.</div>
+            <div id="syncDisconnected" hidden>
+              <button id="connectDriveBtn" class="btn primary big">☁ Kết nối Google Drive</button>
+              <p class="empty-note" style="text-align:center;margin:8px 0 0">Chỉ truy cập đúng 1 file do Highlight Note tạo, không đọc file nào khác của bạn.</p>
+            </div>
+            <div id="syncConnected" hidden>
+              <div class="sync-ok">
+                <span class="dot"></span>
+                <div><b id="syncAccount">Đã kết nối Google Drive</b><small id="syncLast"></small><small id="syncResult"></small></div>
+              </div>
+              <button id="syncNowBtn" class="btn primary big">🔄 Đồng bộ ngay</button>
+              <div class="sync-links">
+                <button class="link" id="openDriveBtn">Xem file trên Drive</button>
+                <button class="link" id="restoreBtn" hidden></button>
+                <button class="link danger" id="disconnectDriveBtn">Ngắt kết nối</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3 id="backup">Sao lưu ra file</h3>
+        <div class="rows">
+          <div class="row">
+            <div class="rt"><b>Tải file backup về máy</b><small>File .json chứa toàn bộ dữ liệu &amp; cài đặt.</small></div>
+            <button class="btn" id="exportBtn">⬇ Tải về</button>
+          </div>
+          <div class="row">
+            <div class="rt"><b>Nạp lại từ file backup</b><small>Chọn gộp vào hoặc thay thế — sẽ hỏi trước.</small></div>
+            <button class="btn ghost" id="importBtn">⬆ Chọn file…</button>
+            <input type="file" id="importFile" accept="application/json,.json" hidden />
+          </div>
+          <div class="row">
+            <div class="rt"><b>Tự sao lưu mỗi tuần</b><small>Tự tải 1 file vào thư mục Tải về (ghi đè file cũ) — vẫn còn kể cả khi gỡ extension. Bắt đầu khi bạn đã có từ 20 mục hoặc dùng được 3 ngày. <button class="link" id="backupNowBtn">Sao lưu ngay</button></small></div>
+            <label class="tgl"><input type="checkbox" id="autoBackup" /><span></span></label>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== TRANG WEB BỊ TẮT ========== -->
+      <section id="sec-sites" data-sec="sites" hidden>
+        <h2>Trang web bị tắt</h2>
+        <p class="lead">Không tô sáng và không hiện thanh Dịch / Lưu trên các trang này. Tắt <code>google.com</code> là tắt luôn <code>mail.google.com</code>.</p>
+        <div class="rows">
+          <div class="row">
+            <input class="text-in" id="siteInput" placeholder="vd: facebook.com — hoặc dán cả link trang" autocomplete="off" />
+            <button class="btn primary" id="siteAddBtn">Thêm</button>
+          </div>
+          <div class="chips" id="siteList" style="border-top:1px solid var(--line)"></div>
+        </div>
+        <p class="empty-note" style="margin:10px 4px">Mẹo: đang ở trang nào thì mở popup → bấm <b>Tắt ở đây</b>.</p>
+      </section>
+
+      <!-- ========== CHUNG ========== -->
+      <section id="sec-general" data-sec="general" hidden>
+        <h2>Chung</h2>
+        <p class="lead">Giao diện, phím tắt và dữ liệu.</p>
+        <div class="rows">
+          <div class="row">
+            <div class="rt"><b>Giao diện</b><small>Áp dụng cho popup và trang cài đặt.</small></div>
+            <div class="seg" role="radiogroup" aria-label="Giao diện">
+              <label><input type="radio" name="theme" value="auto" />Tự động</label>
+              <label><input type="radio" name="theme" value="light" />Sáng</label>
+              <label><input type="radio" name="theme" value="dark" />Tối</label>
+            </div>
+          </div>
+        </div>
+
+        <h3>Phím tắt</h3>
+        <div class="rows" id="kbdList"></div>
+        <p style="margin:10px 4px 0;display:flex;gap:16px;flex-wrap:wrap">
+          <button class="link" id="shortcutsBtn">Đổi phím tắt</button>
+          <button class="link" id="openWelcomeBtn">Xem hướng dẫn sử dụng</button>
+        </p>
+
+        <h3>Dữ liệu</h3>
+        <div class="rows danger-rows">
+          <div class="row">
+            <div class="rt"><b>Xoá toàn bộ dữ liệu</b><small>Một file backup sẽ tự tải về trước khi xoá.</small></div>
+            <button class="btn danger" id="clearBtn">Xoá hết</button>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <div class="card">
-    <p class="card-title">Sao lưu &amp; khôi phục (file JSON)</p>
-    <div class="hint" style="margin-bottom:4px">Tách biệt với đồng bộ tự động ở trên — dùng khi muốn tự giữ 1 file backup hoặc chuyển máy offline.</div>
-    <div class="action-group">
-      <span class="action-label">💾 Sao lưu / khôi phục thủ công</span>
-      <div class="sync-actions">
-        <button id="exportBtn" class="btn-soft">⬇ Tải file backup về máy</button>
-        <button id="importBtn" class="btn-outline">⬆ Nạp lại từ file backup</button>
-        <input type="file" id="importFile" accept="application/json" hidden />
-      </div>
-      <div class="hint" style="margin-top:8px"><span id="ioStatus"></span></div>
-    </div>
-
-    <div class="row" style="margin-top:10px">
-      <label class="check"><input type="checkbox" id="autoBackup" /> Tự động lưu file backup vào máy mỗi tuần</label>
-      <div class="hint">Cứ 7 ngày, extension tự tải 1 file backup vào thư mục Tải về (ghi đè 1 file duy nhất). File này nằm trên máy nên <b>vẫn còn kể cả khi gỡ extension</b>.</div>
-    </div>
-    <div class="action-group" style="margin-top:8px">
-      <div class="sync-actions">
-        <button id="backupNowBtn" class="btn-soft">💾 Sao lưu ngay vào máy</button>
-      </div>
+  <div class="dlg-overlay" id="dlg" hidden>
+    <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+      <h4 id="dlgTitle"></h4>
+      <div class="dlg-body" id="dlgBody"></div>
+      <div class="dlg-acts" id="dlgActs"></div>
     </div>
   </div>
-
-  <div class="card">
-    <p class="card-title">Hướng dẫn</p>
-    <div class="row">
-      <label>Xem lại hướng dẫn dùng &amp; cách ghim icon</label>
-      <button id="openWelcomeBtn">📖 Mở trang hướng dẫn</button>
-      <div class="hint">Mở lại trang chào mừng với hướng dẫn ghim biểu tượng lên thanh công cụ.</div>
-    </div>
-  </div>
-
-  <div class="card danger-zone">
-    <p class="card-title">Vùng nguy hiểm</p>
-    <div class="row">
-      <label>Xoá toàn bộ dữ liệu</label>
-      <button id="clearBtn" class="danger">🗑 Xoá hết dữ liệu</button>
-      <div class="hint">Cẩn thận! Hành động này không thể hoàn tác. Nên Export trước.</div>
-    </div>
-  </div>
-
-  <div class="autosave-pill" id="autosavePill">
-    <span class="ap-ico" id="apIco">✓</span>
-    <span id="apText">Tự động lưu</span>
-  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="constants.js"></script>
   <script src="options.js"></script>
