@@ -1,0 +1,20 @@
+{
+  "extName": {
+    "message": "Highlight Note"
+  },
+  "extDesc": {
+    "message": "Select text to translate instantly, save & highlight words and passages on any website — notes, spaced review, Google Drive sync."
+  },
+  "cmd_add_selected_word": {
+    "message": "Save & highlight the selected text"
+  },
+  "cmd_translate_selection": {
+    "message": "Translate the selected text (view only, not saved)"
+  },
+  "cmd_open_side_panel": {
+    "message": "Open Highlight Note in the Side Panel"
+  },
+  "cmd_execute_action": {
+    "message": "Open Highlight Note"
+  }
+}

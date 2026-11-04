@@ -17,6 +17,17 @@ Hỗ trợ **đa ngôn ngữ**, dữ liệu lưu **cục bộ**, không theo dõ
 
 ---
 
+## Có gì mới ở v1.2.1
+
+- **Sau khi cập nhật, hỏi có muốn khôi phục cài đặt gốc** — chỉ khi thật sự có cài đặt khác mặc định, mỗi phiên bản 1 lần, trong popup (không bật tab). Hộp thoại chọn từng mục: mặc định đã đổi mà bạn chưa chỉnh được chọn sẵn, tính năng chính đang tắt được nhắc "có thể bạn đã quên", thứ bạn tự chỉnh thì giữ. Có Hoàn tác. Xem lại bất cứ lúc nào: Cài đặt → Chung.
+
+- **Cài đặt dễ tìm hơn:** rê chuột vào thanh nổi → bấm **⋯** để *tắt trên trang này*, *tắt thanh*, *đổi ngôn ngữ dịch* ngay tại chỗ; thẻ Dịch có nút bánh răng mở đúng mục Ngôn ngữ. Trang Cài đặt có **ô tìm kiếm** (gõ không dấu được: "mau" → "màu"; phím `/`), **dấu chấm** cạnh cài đặt đã đổi, **Khôi phục mặc định** cho từng mục, công tắc tổng, mục **Ngôn ngữ** đặt lên đầu.
+- **Giao diện tiếng Anh** (mặc định vẫn tiếng Việt cho người Việt — kể cả khi dùng Chrome tiếng Anh, nhờ nhận múi giờ Việt Nam). Chọn trong Cài đặt → Ngôn ngữ giao diện.
+- **"Ngôn ngữ của bạn"** thay cho "chữ Việt" cứng trong code: người Nhật, Đức… dùng cũng đúng (chữ nước ngoài → ngôn ngữ của bạn; chữ của bạn → ngôn ngữ bạn chọn). Thêm Bồ Đào Nha, Ý, Indonesia, Hindi, Ả Rập, Thổ Nhĩ Kỳ.
+- **Gợi ý thông minh, hỏi 1 lần:** thanh nổi hiện 15 lần liền mà không bấm → hỏi có muốn tắt; đã lưu 8 từ vựng → gợi ý bật Chế độ học từ.
+- **Sửa lỗi:** tắt tô sáng ở popup / "Tắt ở đây" không gỡ tô sáng trên tab đang mở; trang Cài đặt đang mở ghi đè thay đổi làm ở thẻ Dịch / popup; "Gộp vào" khi nhập backup âm thầm ghi đè cài đặt (kể cả tắt luôn tiện ích); đổi ngưỡng "đã thuộc" không áp dụng cho từ đã lưu; "khách hàng", "có", "là" không được nhận là chữ Việt; nút giao diện popup không quay về "Tự động" được; "phân biệt hoa/thường" phải tải lại trang mới có tác dụng.
+- **Kiểm thử tự động:** `tests/` — e2e với extension thật (2 lượt: trình duyệt Việt / Anh) + kiểm câu chưa dịch.
+
 ## Có gì mới ở v1.2
 
 - **Tách Dịch và Lưu:** thanh nổi khi bôi đen có 2 nút rõ ràng — **Dịch** (chỉ xem bản dịch, đọc được cả đoạn dài) và **Lưu** (lưu & tô sáng). Đoạn dài khi lưu được coi là ý cần nhớ (loại *Quan trọng*, ô *Ghi chú*), không bị nhồi vào "Từ vựng".
@@ -98,14 +109,27 @@ highlight-note/
 ├── manifest.json          # MV3 config
 ├── background.js          # service worker: context menu, phím tắt, đồng bộ, badge, tiêm content script
 ├── sync.js                # đồng bộ Google Drive: gộp từng mục (hàm thuần mergeStates) + gọi API
-├── constants.js           # loại mục, màu mặc định, nhận diện ngôn ngữ, phát âm (dùng chung)
+├── constants.js           # loại mục, màu mặc định, nhận diện ngôn ngữ, "ngôn ngữ của bạn", phát âm (dùng chung)
+├── i18n.js / i18n-en.js   # dịch giao diện: câu tiếng Việt là khoá, bảng tiếng Anh (xem docs/NOTES.md)
+├── _locales/              # chỉ tên / mô tả / phím tắt trong manifest (Chrome bắt buộc)
 ├── content.js / .css      # tô sáng DOM, tooltip, thẻ lưu nhanh, sticky note, đếm lần gặp
 ├── popup.html / .js / .css   # giao diện quản lý (dùng chung cho Side Panel)
 ├── sidepanel.html         # nhúng popup vào Side Panel
 ├── options.html / .js     # cài đặt
 ├── welcome.html / .js     # trang chào mừng lần cài đầu
 ├── theme-init.js          # đặt theme sáng/tối trước khi vẽ (chống nháy)
-└── icons/                 # icon 16/48/128
+├── icons/                 # icon 16/48/128
+└── tests/                 # e2e (Playwright + extension thật), kiểm câu chưa dịch — KHÔNG đóng gói
+```
+
+### Chạy kiểm thử
+
+```bash
+cd tests && npm i && npx playwright-core install chromium   # lần đầu
+# Lưu ý: khi còn tests/node_modules, Chrome KHÔNG nạp được thư mục này bằng "Tải tiện ích đã giải nén"
+# (file tên bắt đầu bằng "_"). Chạy test xong thì xoá tests/node_modules, hoặc nạp bản zip.
+node e2e/run.js          # ~3 phút, 2 lượt: trình duyệt tiếng Việt + tiếng Anh; ảnh ở tests/e2e/shots/
+node i18n-missing.js     # liệt kê câu giao diện chưa có trong i18n-en.js
 ```
 
 ## Stack
