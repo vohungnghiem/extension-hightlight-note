@@ -1,3 +1,7 @@
+// Dịch giao diện theo ngôn ngữ đã chọn (i18n.js). Câu tiếng Việt trong HTML là khoá.
+self.HN_I18N.initPage();
+const TR = self.HN_I18N.tr;
+
 // Áp theme đã lưu (pre-paint đã đặt theo hệ thống; đây là chỉnh lại nếu người
 // dùng đã chọn cố định Sáng/Tối trong popup).
 try {
@@ -17,13 +21,13 @@ if (protectBtn) {
   protectBtn.addEventListener("click", () => {
     protectBtn.disabled = true;
     protectMsg.style.color = "";
-    protectMsg.textContent = "Đang mở đăng nhập Google…";
+    protectMsg.textContent = TR("Đang mở đăng nhập Google…");
     chrome.runtime.sendMessage({ type: "SYNC_CONNECT" }, (r) => {
       protectBtn.disabled = false;
       if (r && r.ok && r.needConfirm) {
         // Hiếm: Drive có thay đổi đụng tới dữ liệu máy này → xem & xác nhận ở trang Cài đặt.
         protectMsg.style.color = "";
-        protectMsg.textContent = "Đã kết nối. Mở Cài đặt → Đồng bộ để xem các thay đổi và xác nhận.";
+        protectMsg.textContent = TR("Đã kết nối. Mở Cài đặt → Đồng bộ để xem các thay đổi và xác nhận.");
         chrome.tabs.create({ url: chrome.runtime.getURL("options.html#sync") });
         return;
       }
@@ -31,11 +35,11 @@ if (protectBtn) {
         protectMsg.style.color = "#b91c1c";
         const detail = (chrome.runtime.lastError && chrome.runtime.lastError.message)
           || (r && r.error) || "không rõ nguyên nhân";
-        protectMsg.textContent = "✕ Chưa kết nối được: " + detail;
+        protectMsg.textContent = TR("✕ Chưa kết nối được: ") + TR(detail);
       } else {
         protectMsg.style.color = "#15803d";
-        protectMsg.textContent = "✓ Đã kết nối. Trên máy khác, bấm Đồng bộ (biểu tượng ☁ trong popup) để lấy dữ liệu về.";
-        document.getElementById("protectLbl").textContent = "Đã kết nối Google Drive";
+        protectMsg.textContent = TR("✓ Đã kết nối. Trên máy khác, bấm Đồng bộ (biểu tượng ☁ trong popup) để lấy dữ liệu về.");
+        document.getElementById("protectLbl").textContent = TR("Đã kết nối Google Drive");
       }
     });
   });
@@ -44,7 +48,11 @@ if (protectBtn) {
 // Thử ngay: mở 1 bài viết thật để người dùng bôi đen thử (content script chỉ chạy
 // trên trang web, không chạy được trong trang của extension).
 document.getElementById("tryBtn").addEventListener("click", () => {
-  chrome.tabs.create({ url: "https://en.wikipedia.org/wiki/Serendipity" });
+  // Người nói tiếng Anh thì thử với bài tiếng Tây Ban Nha; còn lại bài tiếng Anh.
+  chrome.storage.local.get("settings", ({ settings }) => {
+    const en = self.HN_I18N && /^en/.test((settings && settings.nativeLang) || "");
+    chrome.tabs.create({ url: en ? "https://es.wikipedia.org/wiki/Serendipia" : "https://en.wikipedia.org/wiki/Serendipity" });
+  });
 });
 
 // Trang chào mừng: nút "bắt đầu" đóng tab hiện tại.

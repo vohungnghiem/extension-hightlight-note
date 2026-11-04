@@ -1,0 +1,50 @@
+Highlight, take notes and translate right on the page you're reading. Select text to see its meaning; words and passages you save light up whenever you meet them again, and notes you pin to a page are right there the next time you open it. Made for anyone reading the web in a language that isn't their own.
+
+━━━━━━━━━━━━━━━━━━━━
+
+✦ SELECT TO TRANSLATE, WITHOUT LEAVING THE PAGE
+• Select a word or a whole passage → a small bar appears: Translate · Save · Listen · Copy
+• Translate in a floating card into your own language, even long passages (up to 5,000 characters)
+• Need another language? Click the language name at the top of the card — English, Japanese, Korean, Chinese, Spanish, French, German, Portuguese, Arabic, Hindi… — it's remembered next time
+• English words get IPA pronunciation and audio; dictionary links for English (Cambridge), Japanese (Jisho), Chinese, Korean (Naver)
+• Shortcuts: Alt+Shift+D to translate, Alt+Shift+H to save (change them at chrome://extensions/shortcuts)
+
+✦ SAVE ONCE, SEE IT HIGHLIGHTED EVERYWHERE
+• Click Save → the translation is already filled in, just press Enter
+• Saved words are highlighted on every website; hover to see your meaning, pronunciation and notes
+• Save whole passages: reopen the page and the passage is highlighted in place, with a link back to the source
+• Changed your mind? There's always Undo
+
+✦ NOTES ON THE PAGE ITSELF
+• Right-click an empty spot → "Pin a note on this page": a small sticky note that lives on that page
+• Drag it anywhere, collapse it, hide it without losing anything
+• Every saved word or passage has its own note field for your own explanation
+
+✦ NOT JUST FOR VOCABULARY
+• 5 types, 5 colors: Vocabulary · Important · To-do · Question · Reference
+• Tag items by course or project
+• Great for students reading textbooks and professionals reading technical docs
+
+✦ EASY TO ADJUST
+• Hover the floating bar and click ⋯ to turn it off, turn Highlight Note off on the current site, or change the translation language — right where you are
+• Settings have a search box, show which settings you've changed, and reset per section
+• Interface in English or Vietnamese
+
+✦ TIDY AND EASY TO FIND AGAIN
+• Popup with quick search, filters by type, tag, or what's on the current page
+• Side Panel that stays next to the page while you read (Alt+Shift+S)
+• Add many words at once: paste straight from Excel or Google Sheets
+• Export to Markdown for Obsidian or Notion; back up to a JSON file
+
+✦ SPACED REVIEW (WHEN YOU WANT IT)
+• Flashcards on a 1 → 3 → 7 → 14… day schedule, review with Space · 1 · 2 · 3
+• Off by default — no learning, no nagging
+
+✦ YOUR DATA, ON YOUR COMPUTER
+• No account, no ads, no tracking
+• Only the text you choose to translate is sent to Google Translate / dictionaries
+• Sync between computers through one file in your own Google Drive — only when you click, and it asks before changing or deleting anything
+• Nothing is downloaded automatically; weekly backups only if you turn them on
+
+✦ WHY "READ DATA ON ALL WEBSITES"?
+To highlight your saved words on any page you read. The extension doesn't collect or send your browsing history anywhere. You can turn it off on any site (email, banking…): open the popup → Turn off here, or click ⋯ on the floating bar.

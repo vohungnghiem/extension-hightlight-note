@@ -201,6 +201,48 @@
     @keyframes ui-toast-in { from { opacity: 0; transform: translate(-50%, 8px) scale(0.97); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
     @keyframes ui-toast-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+    /* ===== Tìm cài đặt, khôi phục theo mục, dấu "đã đổi", làm nổi dòng khi mở bằng link ===== */
+    .search { position: relative; margin: 0 4px 14px; }
+    .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--ink-faint); pointer-events: none; }
+    .search input { width: 100%; padding: 8px 10px 8px 32px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+    .search input:focus { outline: none; border-color: var(--brand); box-shadow: var(--ring); }
+    .search-empty { padding: 40px 10px; text-align: center; color: var(--ink-faint); }
+    .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .sec-reset { font-size: 12.5px; font-weight: 600; color: var(--ink-faint); }
+    .sec-reset:hover { color: var(--brand); }
+    body.searching .sec-reset, body.searching .lead, body.searching .tip { display: none; }
+    body.searching section h2 { font-size: 15px; color: var(--ink-faint); margin-top: 18px; }
+    .tip { margin: 10px 4px 0; font-size: 12.5px; color: var(--ink-faint); line-height: 1.5; }
+    .row.changed .rt b::after {
+      content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--brand); flex-shrink: 0;
+    }
+    .row.flash { animation: row-flash 2.2s ease; }
+    @keyframes row-flash { 0%, 40% { background: var(--brand-weak); box-shadow: inset 3px 0 0 var(--brand); } 100% { background: transparent; box-shadow: inset 3px 0 0 transparent; } }
+    .row mark { background: #fde68a; color: inherit; border-radius: 3px; padding: 0 1px; }
+    html[data-theme="dark"] .row mark { background: #6b5a14; }
+    .sel { flex: 0 0 auto; width: auto; max-width: 240px; }
+    .style-row { padding: 0; }
+    .style-row .style-picks { width: 100%; }
+    .dlg-body label.chk { display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; cursor: pointer; }
+    .dlg-body label.chk input { margin-top: 3px; accent-color: var(--brand); }
+    @media (max-width: 760px) { .search { margin: 0 0 8px; } }
+    .dlg:has(.rv-list) { width: min(560px, 100%); }
+    .rv-list { max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; margin: 4px 0 10px; }
+    .rv-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-top: 1px solid var(--line); cursor: pointer; }
+    .rv-row:first-child { border-top: none; }
+    .rv-row input { margin-top: 3px; accent-color: var(--brand); flex-shrink: 0; }
+    .rv-main { min-width: 0; }
+    .rv-main b { display: block; color: var(--ink); font-weight: 600; }
+    .rv-main small { display: block; font-size: 12px; }
+    .rv-tag { color: var(--ink-faint); }
+    .rv-newDefault .rv-tag { color: var(--ok); font-weight: 700; }
+    .rv-off .rv-tag { color: #b45309; font-weight: 700; }
+    html[data-theme="dark"] .rv-off .rv-tag { color: #fbbf24; }
+    .rv-vals { color: var(--ink-soft); }
+    .rv-vals .sw { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: 3px; border: 1px solid var(--line); }
+    .rv-note { font-size: 12.5px; color: var(--ink-faint); }
+    .toast-undo { margin-left: 6px; background: none; border: 0; color: #a5b4fc; font: inherit; font-weight: 800; cursor: pointer; padding: 0; }
   </style>
 </head>
 <body>
@@ -210,21 +252,92 @@
         <img src="icons/icon48.png" alt="" />
         <div><b>Highlight Note</b><small>Cài đặt · tự động lưu</small></div>
       </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="setSearch" placeholder="Tìm cài đặt…" title="Tìm cài đặt… (vd: màu, tắt, ngôn ngữ) — phím tắt: /" autocomplete="off" aria-label="Tìm cài đặt" />
+      </div>
       <nav class="nav" aria-label="Các mục cài đặt">
+        <button data-sec="language"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>Ngôn ngữ</button>
+        <button data-sec="selection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6.1H3"/><path d="M21 12.1H3"/><path d="M15.1 18H3"/></svg>Dịch &amp; thanh nổi</button>
         <button data-sec="highlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>Tô sáng</button>
-        <button data-sec="selection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6.1H3"/><path d="M21 12.1H3"/><path d="M15.1 18H3"/></svg>Khi bôi đen chữ</button>
-        <button data-sec="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Ôn tập</button>
-        <button data-sec="sync"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H7a5 5 0 1 1 1.02-9.9A6 6 0 0 1 19.5 11 4 4 0 0 1 17.5 19z"/></svg>Đồng bộ &amp; sao lưu</button>
-        <button data-sec="sites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Trang web bị tắt</button>
+        <button data-sec="review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Học từ</button>
+        <button data-sec="sites"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>Bật / tắt theo trang</button>
+        <button data-sec="sync"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H7a5 5 0 1 1 1.02-9.9A6 6 0 0 1 19.5 11 4 4 0 0 1 17.5 19z"/></svg>Dữ liệu &amp; đồng bộ</button>
         <button data-sec="general"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Chung</button>
       </nav>
       <div class="side-foot"><span id="ver"></span> · <a href="privacy-policy.html" target="_blank">Quyền riêng tư</a></div>
     </aside>
 
     <main>
+      <div id="searchEmpty" class="search-empty" hidden>Không tìm thấy cài đặt nào. Thử từ khác, vd: "thanh", "màu", "backup".</div>
+
+      <!-- ========== NGÔN NGỮ ========== -->
+      <section id="sec-language" data-sec="language">
+        <div class="sec-head"><h2>Ngôn ngữ</h2><button class="link sec-reset" data-sec="language">Khôi phục mặc định</button></div>
+        <p class="lead">Ngôn ngữ của giao diện và của bản dịch.</p>
+        <div class="rows">
+          <div class="row" data-kw="giao diện language interface">
+            <div class="rt"><b>Ngôn ngữ giao diện</b><small>Popup, trang cài đặt, thanh nổi và các thẻ trên trang web.</small></div>
+            <select class="text-in sel" data-set="uiLang" id="uiLang"></select>
+          </div>
+          <div class="row" data-kw="tiếng mẹ đẻ native">
+            <div class="rt"><b>Ngôn ngữ của bạn</b><small>Chữ bằng ngôn ngữ này được coi là chữ của bạn: không tự dịch xem trước, không hiện nhãn ngôn ngữ / phát âm.</small></div>
+            <select class="text-in sel" data-set="nativeLang" id="nativeLang"></select>
+          </div>
+        </div>
+        <h3>Dịch sang</h3>
+        <div class="rows">
+          <div class="row" data-kw="đích target dịch">
+            <div class="rt"><b>Chữ nước ngoài dịch sang</b><small>Ngôn ngữ của bản dịch, nghĩa xem trước và nghĩa tự điền khi lưu.</small></div>
+            <select class="text-in sel" data-set="targetLang" id="targetLang"></select>
+          </div>
+          <div class="row" data-kw="đích target dịch">
+            <div class="rt"><b>Chữ bằng ngôn ngữ của bạn dịch sang</b><small>Khi bạn bôi đen chữ của chính mình rồi bấm Dịch (vd để viết email bằng tiếng Anh).</small></div>
+            <select class="text-in sel" data-set="nativeTargetLang" id="nativeTargetLang"></select>
+          </div>
+        </div>
+        <p class="tip">Mẹo: đổi nhanh ngay trên thẻ Dịch — bấm vào tên ngôn ngữ ở đầu thẻ. Lựa chọn được nhớ cho lần sau.</p>
+      </section>
+
+      <!-- ========== DỊCH & THANH NỔI ========== -->
+      <section id="sec-selection" data-sec="selection" hidden>
+        <div class="sec-head"><h2>Dịch &amp; thanh nổi</h2><button class="link sec-reset" data-sec="selection">Khôi phục mặc định</button></div>
+        <p class="lead">Thanh nhỏ hiện cạnh chữ bạn vừa bôi đen, có nút <b>Dịch</b> (chỉ xem) và <b>Lưu</b> (lưu &amp; tô sáng).</p>
+        <div class="rows">
+          <div class="row" data-kw="vướng che phiền popup bubble floating bar">
+            <div class="rt"><b>Hiện thanh Dịch / Lưu khi bôi đen</b><small>Tắt nếu thấy vướng — vẫn dùng được Alt+Shift+D (dịch), Alt+Shift+H (lưu) hoặc chuột phải.</small></div>
+            <label class="tgl"><input type="checkbox" data-set="showSelButton" id="showSelButton" /><span></span></label>
+          </div>
+          <div class="row sub" data-kw="nghĩa preview mạng google">
+            <div class="rt"><b>Hiện sẵn nghĩa của từ ngắn</b><small>Gửi chữ đang chọn lên Google Dịch ngay khi bôi đen. Tắt thì chỉ dịch khi bạn bấm.</small></div>
+            <label class="tgl"><input type="checkbox" data-set="previewTranslate" id="previewTranslate" /><span></span></label>
+          </div>
+          <div class="row sub" data-kw="tiếng việt native">
+            <div class="rt"><b>Không hiện khi bôi chữ bằng ngôn ngữ của bạn</b><small id="hideNativeHint">Vẫn dịch / lưu được bằng phím tắt hoặc chuột phải.</small></div>
+            <label class="tgl"><input type="checkbox" data-set="hideSelNative" id="hideSelNative" /><span></span></label>
+          </div>
+          <div class="row sub" data-kw="phát âm nghe speak">
+            <div class="rt"><b>Nút phát âm</b><small>Hiện khi rê chuột vào thanh.</small></div>
+            <label class="tgl"><input type="checkbox" data-set="showSelSpeak" id="showSelSpeak" /><span></span></label>
+          </div>
+          <div class="row sub" data-kw="chép copy">
+            <div class="rt"><b>Nút sao chép</b><small>Hiện khi rê chuột vào thanh.</small></div>
+            <label class="tgl"><input type="checkbox" data-set="showSelCopy" id="showSelCopy" /><span></span></label>
+          </div>
+        </div>
+        <p class="tip">Mẹo: trên thanh nổi, rê chuột rồi bấm <b>⋯</b> để tắt thanh hoặc tắt Highlight Note trên trang đang xem.</p>
+        <h3>Thông báo</h3>
+        <div class="rows">
+          <div class="row" data-kw="toast hoàn tác undo">
+            <div class="rt"><b>Thông báo nhỏ góc màn hình</b><small>Báo khi lưu / sửa / xoá, kèm nút Hoàn tác.</small></div>
+            <label class="tgl"><input type="checkbox" data-set="showToasts" id="showToasts" /><span></span></label>
+          </div>
+        </div>
+      </section>
+
       <!-- ========== TÔ SÁNG ========== -->
-      <section id="sec-highlight" data-sec="highlight">
-        <h2>Tô sáng</h2>
+      <section id="sec-highlight" data-sec="highlight" hidden>
+        <div class="sec-head"><h2>Tô sáng</h2><button class="link sec-reset" data-sec="highlight">Khôi phục mặc định</button></div>
         <p class="lead">Cách các mục đã lưu hiện trên trang web.</p>
 
         <div class="rows">
@@ -241,123 +354,99 @@
 
         <h3>Kiểu</h3>
         <div class="rows">
-          <div class="style-picks" role="radiogroup" aria-label="Kiểu tô sáng">
-            <label class="sp"><input type="radio" name="hlStyle" value="underline" /><span class="pv swatch" data-style="underline"><span class="hl" data-l="hot">Aa chữ</span></span>Gạch chân</label>
-            <label class="sp"><input type="radio" name="hlStyle" value="background" /><span class="pv swatch" data-style="background"><span class="hl">Aa chữ</span></span>Tô nền</label>
-            <label class="sp"><input type="radio" name="hlStyle" value="wavy" /><span class="pv swatch" data-style="wavy"><span class="hl">Aa chữ</span></span>Lượn sóng</label>
-            <label class="sp"><input type="radio" name="hlStyle" value="outline" /><span class="pv swatch" data-style="outline"><span class="hl">Aa chữ</span></span>Khung viền</label>
+          <div class="row style-row" data-kw="gạch chân nền sóng viền style">
+            <div class="style-picks" role="radiogroup" aria-label="Kiểu tô sáng">
+              <label class="sp"><input type="radio" name="hlStyle" data-set="highlightStyle" value="underline" /><span class="pv swatch" data-style="underline"><span class="hl" data-l="hot">Aa</span></span>Gạch chân</label>
+              <label class="sp"><input type="radio" name="hlStyle" data-set="highlightStyle" value="background" /><span class="pv swatch" data-style="background"><span class="hl">Aa</span></span>Tô nền</label>
+              <label class="sp"><input type="radio" name="hlStyle" data-set="highlightStyle" value="wavy" /><span class="pv swatch" data-style="wavy"><span class="hl">Aa</span></span>Lượn sóng</label>
+              <label class="sp"><input type="radio" name="hlStyle" data-set="highlightStyle" value="outline" /><span class="pv swatch" data-style="outline"><span class="hl">Aa</span></span>Khung viền</label>
+            </div>
           </div>
-          <div class="row" id="thickRow">
+          <div class="row" id="thickRow" data-kw="dày nét thickness">
             <div class="rt"><b>Độ dày nét</b></div>
-            <input type="range" id="hlThickness" min="1" max="5" step="1" value="2" aria-label="Độ dày nét" />
+            <input type="range" data-set="highlightThickness" id="hlThickness" min="1" max="5" step="1" value="2" aria-label="Độ dày nét" />
             <span id="hlThicknessVal" style="width:34px;text-align:right;font-weight:700">2px</span>
           </div>
         </div>
 
         <h3>Màu theo loại</h3>
         <div class="rows">
-          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Từ vựng</b></div><input type="color" id="color" value="#ffeb3b" aria-label="Màu Từ vựng" /></div>
-          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Quan trọng</b></div><input type="color" id="colorImportant" value="#ff5a5f" aria-label="Màu Quan trọng" /></div>
-          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Cần làm</b></div><input type="color" id="colorTodo" value="#28c76f" aria-label="Màu Cần làm" /></div>
-          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Câu hỏi</b></div><input type="color" id="colorQuestion" value="#9b6dff" aria-label="Màu Câu hỏi" /></div>
-          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Tư liệu</b></div><input type="color" id="colorReference" value="#00bcd4" aria-label="Màu Tư liệu" /></div>
-          <div class="row"><div class="rt"><small>Đổi màu xong xem ngay ở khung phía trên.</small></div><button class="link" id="resetColorsBtn">Khôi phục màu mặc định</button></div>
+          <div class="row" data-kw="màu color vàng"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Từ vựng</b></div><input type="color" data-set="highlightColor" id="color" value="#ffeb3b" aria-label="Màu Từ vựng" /></div>
+          <div class="row" data-kw="màu color đỏ"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Quan trọng</b></div><input type="color" data-set="typeColors.important" id="colorImportant" value="#ff5a5f" aria-label="Màu Quan trọng" /></div>
+          <div class="row" data-kw="màu color xanh"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Cần làm</b></div><input type="color" data-set="typeColors.todo" id="colorTodo" value="#28c76f" aria-label="Màu Cần làm" /></div>
+          <div class="row" data-kw="màu color tím"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Câu hỏi</b></div><input type="color" data-set="typeColors.question" id="colorQuestion" value="#9b6dff" aria-label="Màu Câu hỏi" /></div>
+          <div class="row" data-kw="màu color xanh ngọc"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Tư liệu</b></div><input type="color" data-set="typeColors.reference" id="colorReference" value="#00bcd4" aria-label="Màu Tư liệu" /></div>
         </div>
 
         <h3>Khác</h3>
         <div class="rows">
-          <div class="row">
+          <div class="row" data-kw="hoa thường case">
             <div class="rt"><b>Phân biệt chữ hoa / thường</b><small>Tắt: "Apple" và "apple" được coi là một.</small></div>
-            <label class="tgl"><input type="checkbox" id="caseSensitive" /><span></span></label>
+            <label class="tgl"><input type="checkbox" data-set="caseSensitive" id="caseSensitive" /><span></span></label>
           </div>
         </div>
       </section>
 
-      <!-- ========== KHI BÔI ĐEN ========== -->
-      <section id="sec-selection" data-sec="selection" hidden>
-        <h2>Khi bôi đen chữ</h2>
-        <p class="lead">Thanh nhỏ hiện cạnh chữ bạn vừa bôi đen, có nút <b>Dịch</b> (chỉ xem) và <b>Lưu</b> (lưu &amp; tô sáng).</p>
-        <div class="rows">
-          <div class="row">
-            <div class="rt"><b>Hiện thanh Dịch / Lưu</b><small>Tắt nếu thấy vướng — vẫn dùng được phím tắt hoặc chuột phải.</small></div>
-            <label class="tgl"><input type="checkbox" id="showSelButton" /><span></span></label>
-          </div>
-          <div class="row sub">
-            <div class="rt"><b>Hiện sẵn nghĩa của từ ngắn</b><small>Gửi chữ đang chọn lên Google Dịch ngay khi bôi đen. Tắt thì chỉ dịch khi bạn bấm.</small></div>
-            <label class="tgl"><input type="checkbox" id="previewTranslate" /><span></span></label>
-          </div>
-          <div class="row sub">
-            <div class="rt"><b>Không hiện khi bôi chữ tiếng Việt</b><small>Bôi chữ Việt thì không bật thanh này (vẫn lưu được bằng Alt+Shift+H hoặc chuột phải). Chữ Việt không dấu thì không nhận ra được.</small></div>
-            <label class="tgl"><input type="checkbox" id="hideSelVietnamese" /><span></span></label>
-          </div>
-          <div class="row sub">
-            <div class="rt"><b>Nút phát âm</b></div>
-            <label class="tgl"><input type="checkbox" id="showSelSpeak" /><span></span></label>
-          </div>
-          <div class="row sub">
-            <div class="rt"><b>Nút sao chép</b></div>
-            <label class="tgl"><input type="checkbox" id="showSelCopy" /><span></span></label>
-          </div>
-        </div>
-        <h3>Ngôn ngữ dịch</h3>
-        <div class="rows">
-          <div class="row">
-            <div class="rt"><b>Dịch chữ nước ngoài sang</b><small>Ngôn ngữ của bản dịch và nghĩa tự điền khi lưu. Đổi nhanh ngay trên thẻ Dịch: bấm vào tên ngôn ngữ ở đầu thẻ.</small></div>
-            <select class="text-in" id="targetLang" style="flex:0 0 auto;width:auto"></select>
-          </div>
-          <div class="row">
-            <div class="rt"><b>Chữ tiếng Việt dịch sang</b><small>Khi bạn bôi đen chữ <i>tiếng Việt</i> rồi bấm Dịch (cũng đổi nhanh được trên thẻ Dịch).</small></div>
-            <select class="text-in" id="viTargetLang" style="flex:0 0 auto;width:auto"></select>
-          </div>
-        </div>
-        <h3>Thông báo</h3>
-        <div class="rows">
-          <div class="row">
-            <div class="rt"><b>Thông báo nhỏ góc màn hình</b><small>Báo khi lưu / sửa / xoá, kèm nút Hoàn tác.</small></div>
-            <label class="tgl"><input type="checkbox" id="showToasts" /><span></span></label>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========== ÔN TẬP ========== -->
+      <!-- ========== HỌC TỪ ========== -->
       <section id="sec-review" data-sec="review" hidden>
-        <h2>Ôn tập</h2>
+        <div class="sec-head"><h2>Học từ</h2><button class="link sec-reset" data-sec="review">Khôi phục mặc định</button></div>
         <p class="lead">Dành cho người học từ vựng. <b>Tắt</b> thì im hẳn: không nút Ôn tập, không nhắc nhở, không số trên biểu tượng, không thanh tiến độ "0/20".</p>
         <div class="rows">
-          <div class="row">
+          <div class="row" data-kw="ôn tập flashcard srs review">
             <div class="rt"><b>Chế độ học từ</b><small>Ôn tập bằng thẻ ghi nhớ, lịch ôn tự giãn dần (1 → 3 → 7 → 14… ngày), nhắc khi có từ đến hạn, theo dõi số lần gặp. Bật/tắt nhanh ở menu ⋯ của popup.</small></div>
-            <label class="tgl"><input type="checkbox" id="learningMode" /><span></span></label>
+            <label class="tgl"><input type="checkbox" data-set="learningMode" id="learningMode" /><span></span></label>
           </div>
-          <div class="row sub">
+          <div class="row sub" data-kw="nhắc badge số">
             <div class="rt"><b>Nhắc khi có từ đến hạn ôn</b><small>Số trên biểu tượng + 1 dòng nhỏ trong popup (bấm × để ẩn trong ngày). Từ mới lưu được tính từ hôm sau.</small></div>
-            <label class="tgl"><input type="checkbox" id="srsReminder" /><span></span></label>
+            <label class="tgl"><input type="checkbox" data-set="srsReminder" id="srsReminder" /><span></span></label>
           </div>
-          <div class="row sub">
+          <div class="row sub" data-kw="giới hạn mỗi ngày">
             <div class="rt"><b>Số từ mới mỗi ngày</b><small>Từ đã tới hạn ôn lại không bị giới hạn.</small></div>
-            <input type="number" id="srsNewPerDay" min="1" max="500" value="20" />
+            <input type="number" data-set="srsNewPerDay" id="srsNewPerDay" min="1" max="500" value="20" />
           </div>
         </div>
-        <h3>Tự đánh dấu đã thuộc (khi bật chế độ học từ)</h3>
+        <h3>Tự đánh dấu đã thuộc</h3>
         <div class="rows">
-          <div class="row">
-            <div class="rt"><b>Sau bao nhiêu lần gặp</b><small>Mỗi lần rê chuột xem nghĩa trên trang = 1 lần gặp. Đủ số lần thì ngừng tô sáng từ đó (vẫn giữ trong danh sách).</small></div>
-            <input type="number" id="threshold" min="1" max="200" value="20" />
+          <div class="row" data-kw="ngưỡng threshold lần gặp">
+            <div class="rt"><b>Sau bao nhiêu lần gặp</b><small>Mỗi lần rê chuột xem nghĩa trên trang = 1 lần gặp. Đủ số lần thì ngừng tô sáng từ đó (vẫn giữ trong danh sách). Áp dụng cho mọi từ, kể cả từ đã lưu.</small></div>
+            <input type="number" data-set="defaultThreshold" id="threshold" min="1" max="200" value="20" />
           </div>
-          <div class="row">
+          <div class="row" data-kw="phút cooldown">
             <div class="rt"><b>Mỗi từ tính tối đa 1 lần gặp trong (phút)</b><small>Rê chuột qua lại liên tục không bị tính nhiều lần.</small></div>
-            <input type="number" id="cooldownMin" min="1" max="1440" value="5" />
+            <input type="number" data-set="hoverCooldownMs" id="cooldownMin" min="1" max="1440" value="5" />
           </div>
         </div>
       </section>
 
-      <!-- ========== ĐỒNG BỘ & SAO LƯU ========== -->
+      <!-- ========== BẬT / TẮT THEO TRANG ========== -->
+      <section id="sec-sites" data-sec="sites" hidden>
+        <div class="sec-head"><h2>Bật / tắt theo trang</h2></div>
+        <p class="lead">Tắt hẳn ở mọi nơi, hoặc chỉ trên một số trang web.</p>
+        <div class="rows">
+          <div class="row" data-kw="tắt hết bật tắt master enable disable">
+            <div class="rt"><b>Bật Highlight Note trên các trang web</b><small>Tắt thì ngừng tô sáng và ẩn thanh Dịch / Lưu trên mọi trang (danh sách vẫn giữ nguyên). Cũng là công tắc ở đầu popup.</small></div>
+            <label class="tgl"><input type="checkbox" data-set="enabled" id="enabled" /><span></span></label>
+          </div>
+        </div>
+        <h3>Trang web bị tắt</h3>
+        <div class="rows">
+          <div class="row" data-kw="chặn blacklist trang web site domain">
+            <input class="text-in" id="siteInput" placeholder="vd: facebook.com — hoặc dán cả link trang" autocomplete="off" aria-label="Tên miền cần tắt" />
+            <button class="btn primary" id="siteAddBtn">Thêm</button>
+          </div>
+          <div class="chips" id="siteList" style="border-top:1px solid var(--line)"></div>
+        </div>
+        <p class="tip">Không tô sáng và không hiện thanh Dịch / Lưu trên các trang này. Tắt <code>google.com</code> là tắt luôn <code>mail.google.com</code>. Đang ở trang nào thì mở popup → <b>Tắt ở đây</b>, hoặc bấm <b>⋯</b> trên thanh nổi.</p>
+      </section>
+
+      <!-- ========== DỮ LIỆU & ĐỒNG BỘ ========== -->
       <section id="sec-sync" data-sec="sync" hidden>
-        <h2>Đồng bộ &amp; sao lưu</h2>
+        <div class="sec-head"><h2>Dữ liệu &amp; đồng bộ</h2></div>
         <p class="lead">Dùng nhiều máy, hoặc giữ dữ liệu an toàn khi cài lại.</p>
 
         <h3>Đồng bộ qua Google Drive</h3>
         <div class="rows">
-          <div class="how">
+          <div class="how" data-kw="drive sync nhiều máy">
             Không có gì chạy ngầm — bạn bấm <b>Đồng bộ</b> khi cần. Dữ liệu được <b>gộp từng mục</b> với 1 file trong Drive của bạn:
             <ul>
               <li>Mục mới ở máy nào cũng được giữ.</li>
@@ -367,7 +456,7 @@
           <div class="sync-box">
             <div id="syncNotConfigured" class="warn-box" hidden>Bản cài này chưa hỗ trợ Google Drive. Hãy dùng <b>Sao lưu ra file</b> bên dưới để chuyển dữ liệu giữa các máy.</div>
             <div id="syncDisconnected" hidden>
-              <button id="connectDriveBtn" class="btn primary big"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>Kết nối Google Drive</button>
+              <button id="connectDriveBtn" class="btn primary big"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>Kết nối Google Drive</button>
               <p class="empty-note" style="text-align:center;margin:8px 0 0">Chỉ truy cập đúng 1 file do Highlight Note tạo, không đọc file nào khác của bạn.</p>
             </div>
             <div id="syncConnected" hidden>
@@ -375,7 +464,7 @@
                 <span class="dot"></span>
                 <div><b id="syncAccount">Đã kết nối Google Drive</b><small id="syncLast"></small><small id="syncResult"></small></div>
               </div>
-              <button id="syncNowBtn" class="btn primary big"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Đồng bộ ngay</button>
+              <button id="syncNowBtn" class="btn primary big"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Đồng bộ ngay</button>
               <div class="sync-links">
                 <button class="link" id="openDriveBtn">Xem file trên Drive</button>
                 <button class="link" id="restoreBtn" hidden></button>
@@ -387,63 +476,69 @@
 
         <h3 id="backup">Sao lưu ra file</h3>
         <div class="rows">
-          <div class="row">
+          <div class="row" data-kw="export xuất backup json">
             <div class="rt"><b>Tải file backup về máy</b><small>File .json chứa toàn bộ dữ liệu &amp; cài đặt.</small></div>
             <button class="btn" id="exportBtn">⬇ Tải về</button>
           </div>
-          <div class="row">
+          <div class="row" data-kw="import nhập khôi phục restore">
             <div class="rt"><b>Nạp lại từ file backup</b><small>Chọn gộp vào hoặc thay thế — sẽ hỏi trước.</small></div>
             <button class="btn ghost" id="importBtn">⬆ Chọn file…</button>
             <input type="file" id="importFile" accept="application/json,.json" hidden />
           </div>
-          <div class="row">
+          <div class="row" data-kw="tự động hàng tuần auto weekly download">
             <div class="rt"><b>Tự sao lưu mỗi tuần</b><small>Đang tắt mặc định. Bật lên thì mỗi tuần tự tải 1 file vào thư mục Tải về (ghi đè file cũ) — vẫn còn kể cả khi gỡ extension. Bắt đầu khi bạn đã có từ 20 mục hoặc dùng được 3 ngày. <button class="link" id="backupNowBtn">Sao lưu ngay</button></small></div>
-            <label class="tgl"><input type="checkbox" id="autoBackup" /><span></span></label>
+            <label class="tgl"><input type="checkbox" data-set="autoBackup" id="autoBackup" /><span></span></label>
           </div>
         </div>
-      </section>
 
-      <!-- ========== TRANG WEB BỊ TẮT ========== -->
-      <section id="sec-sites" data-sec="sites" hidden>
-        <h2>Trang web bị tắt</h2>
-        <p class="lead">Không tô sáng và không hiện thanh Dịch / Lưu trên các trang này. Tắt <code>google.com</code> là tắt luôn <code>mail.google.com</code>.</p>
-        <div class="rows">
-          <div class="row">
-            <input class="text-in" id="siteInput" placeholder="vd: facebook.com — hoặc dán cả link trang" autocomplete="off" />
-            <button class="btn primary" id="siteAddBtn">Thêm</button>
+        <h3>Xoá dữ liệu</h3>
+        <div class="rows danger-rows">
+          <div class="row" data-kw="xoá hết delete clear">
+            <div class="rt"><b>Xoá toàn bộ dữ liệu</b><small>Một file backup sẽ tự tải về trước khi xoá.</small></div>
+            <button class="btn danger" id="clearBtn">Xoá hết</button>
           </div>
-          <div class="chips" id="siteList" style="border-top:1px solid var(--line)"></div>
         </div>
-        <p class="empty-note" style="margin:10px 4px">Mẹo: đang ở trang nào thì mở popup → bấm <b>Tắt ở đây</b>.</p>
       </section>
 
       <!-- ========== CHUNG ========== -->
       <section id="sec-general" data-sec="general" hidden>
-        <h2>Chung</h2>
-        <p class="lead">Giao diện, phím tắt và dữ liệu.</p>
+        <div class="sec-head"><h2>Chung</h2><button class="link sec-reset" data-sec="general">Khôi phục mặc định</button></div>
+        <p class="lead">Giao diện, phím tắt, hướng dẫn và góp ý.</p>
         <div class="rows">
-          <div class="row">
+          <div class="row" data-kw="sáng tối dark light theme">
             <div class="rt"><b>Giao diện</b><small>Áp dụng cho popup và trang cài đặt.</small></div>
             <div class="seg" role="radiogroup" aria-label="Giao diện">
-              <label><input type="radio" name="theme" value="auto" />Tự động</label>
-              <label><input type="radio" name="theme" value="light" />Sáng</label>
-              <label><input type="radio" name="theme" value="dark" />Tối</label>
+              <label><input type="radio" name="theme" data-set="theme" value="auto" />Tự động</label>
+              <label><input type="radio" name="theme" data-set="theme" value="light" />Sáng</label>
+              <label><input type="radio" name="theme" data-set="theme" value="dark" />Tối</label>
             </div>
           </div>
         </div>
 
         <h3>Phím tắt</h3>
-        <div class="rows" id="kbdList"></div>
-        <p style="margin:10px 4px 0;display:flex;gap:16px;flex-wrap:wrap">
+        <div class="rows" id="kbdList" data-kw="shortcut phím tắt bàn phím keyboard"></div>
+        <p class="tip" style="display:flex;gap:16px;flex-wrap:wrap">
           <button class="link" id="shortcutsBtn">Đổi phím tắt</button>
-          <button class="link" id="openWelcomeBtn">Xem hướng dẫn sử dụng</button>
+          <span>Trên Windows, Alt+Shift có thể trùng phím đổi bộ gõ — nếu phím tắt không chạy, đổi sang Ctrl+Shift+….</span>
         </p>
 
-        <h3>Dữ liệu</h3>
-        <div class="rows danger-rows">
-          <div class="row">
-            <div class="rt"><b>Xoá toàn bộ dữ liệu</b><small>Một file backup sẽ tự tải về trước khi xoá.</small></div>
-            <button class="btn danger" id="clearBtn">Xoá hết</button>
+        <h3>Trợ giúp</h3>
+        <div class="rows">
+          <div class="row" data-kw="hướng dẫn help guide">
+            <div class="rt"><b>Hướng dẫn sử dụng</b><small>Cách dịch, lưu, ghim ghi chú và ôn tập.</small></div>
+            <button class="btn ghost" id="openWelcomeBtn">Mở hướng dẫn</button>
+          </div>
+          <div class="row" data-kw="góp ý đánh giá feedback review lỗi bug">
+            <div class="rt"><b>Góp ý &amp; đánh giá</b><small>Gặp lỗi hoặc muốn có thêm tính năng? Để lại đánh giá trên Chrome Web Store — mình đọc hết.</small></div>
+            <button class="btn ghost" id="feedbackBtn">Mở trang đánh giá</button>
+          </div>
+          <div class="row" data-kw="khác mặc định cập nhật update reset khôi phục gốc">
+            <div class="rt"><b>Xem cài đặt khác mặc định</b><small>Liệt kê những gì bạn đã chỉnh (và những gì đang tắt), chọn mục muốn đưa về mặc định gốc. Sau mỗi lần cập nhật, Highlight Note cũng hỏi bạn 1 lần.</small></div>
+            <button class="btn ghost" id="reviewSettingsBtn">Xem lại</button>
+          </div>
+          <div class="row" data-kw="reset khôi phục mặc định default">
+            <div class="rt"><b>Khôi phục toàn bộ cài đặt</b><small>Đưa mọi cài đặt về mặc định. Từ vựng, ghi chú, danh sách trang bị tắt và kết nối Drive giữ nguyên.</small></div>
+            <button class="btn ghost" id="resetAllBtn">Khôi phục</button>
           </div>
         </div>
       </section>
@@ -459,6 +554,8 @@
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
+  <script src="i18n-en.js"></script>
+  <script src="i18n.js"></script>
   <script src="constants.js"></script>
   <script src="options.js"></script>
 </body>

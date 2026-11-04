@@ -4,3 +4,8 @@ extension-private-key.pem
 
 # Private signing key - KHÔNG commit, KHÔNG chia sẻ
 highlight-note-key.pem
+
+# Kiểm thử
+tests/node_modules/
+tests/e2e/shots/
+tests/e2e/results.json

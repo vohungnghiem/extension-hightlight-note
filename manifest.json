@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0koKbln9viFewr3fftFe8GfiD7uvgfDxdwrMbE1tYddLTKun6dveNmXtiq6NF1K2eCw1p7YjeTlG6mSZkth4xI6OEmt7oUoQ/lxfzzxEeJ7aU6jVOowWd7yx8IeYcq4npKBb5uHE8khMf6S8V4h4bJyemVKN/oANPOgI4cxGM3vCsIt5NJu2wvuMmQ6AqR5qLQcxZ+1DuK3+psljy3n3r9jd4mFnk8Om4erUIn0OE9Eojvu0AkBmhkKgmF/o+KJvELAEU2qfoOS5BkrkFLJ5Niv0YbiI356z0Qc0paG8vW6hFcw7Di8FYsL/u/BBJc7maoOBPm8fZmgsdFNVuEChQQIDAQAB",
-  "name": "Highlight Note",
-  "version": "1.2.0",
-  "description": "Bôi đen để dịch nhanh, lưu & tô sáng từ, đoạn văn trên mọi trang web — ghi chú, ôn tập, đồng bộ Google Drive.",
+  "name": "__MSG_extName__",
+  "version": "1.2.1",
+  "default_locale": "en",
+  "description": "__MSG_extDesc__",
   "permissions": [
     "storage",
     "contextMenus",
@@ -28,7 +29,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Highlight Note"
+    "default_title": "__MSG_extName__"
   },
   "side_panel": {
     "default_path": "sidepanel.html"
@@ -39,25 +40,25 @@
       "suggested_key": {
         "default": "Alt+Shift+H"
       },
-      "description": "Lưu & tô sáng phần đang bôi đen"
+      "description": "__MSG_cmd_add_selected_word__"
     },
     "translate-selection": {
       "suggested_key": {
         "default": "Alt+Shift+D"
       },
-      "description": "Dịch phần đang bôi đen (chỉ xem, không lưu)"
+      "description": "__MSG_cmd_translate_selection__"
     },
     "open-side-panel": {
       "suggested_key": {
         "default": "Alt+Shift+S"
       },
-      "description": "Mở Highlight Note ở Side Panel"
+      "description": "__MSG_cmd_open_side_panel__"
     },
     "_execute_action": {
       "suggested_key": {
         "default": "Ctrl+Shift+Y"
       },
-      "description": "Mở Highlight Note"
+      "description": "__MSG_cmd_execute_action__"
     }
   },
   "content_scripts": [
@@ -66,6 +67,8 @@
         "<all_urls>"
       ],
       "js": [
+        "i18n-en.js",
+        "i18n.js",
         "constants.js",
         "content.js"
       ],
@@ -83,8 +86,13 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/icon16.png", "icons/icon48.png"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "icons/icon16.png",
+        "icons/icon48.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }

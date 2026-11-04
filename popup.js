@@ -1,7 +1,10 @@
 // Popup / Side Panel: quản lý danh sách, lọc nhanh, thêm mục, ôn tập, sao lưu.
 
 const $ = (id) => document.getElementById(id);
-const { VN_TYPES, detectLang, isVietnamese, speak, hostBlocked } = self.HN_CONST;
+const { VN_TYPES, detectLang, isVietnamese, isNativeText, nativeLang, sameLang, speak, hostBlocked } = self.HN_CONST;
+// Dịch giao diện: câu tiếng Việt là khoá (i18n.js). Nội dung người dùng (từ, nghĩa…) không dịch.
+const T = self.HN_I18N.t, TR = self.HN_I18N.tr;
+self.HN_I18N.initPage({ skip: ".term-text, .phon, .meaning, .note, .tag-chip, .q-term, .q-phon, .q-meaning, .q-note, .bulk-preview" });
 
 let words = [];
 let settings = {};
@@ -12,6 +15,8 @@ let tagFilter = null;       // lọc theo 1 tag (null = không lọc)
 let pageIds = null;         // Set id các mục đang hiện trên trang (null = chưa biết / không hỏi được)
 let renderLimit = 150;      // danh sách dài → hiện dần cho nhanh
 const PAGE_SIZE = 150;
+const LEARNING_TIP_AT = 8;
+let updateReview = null;    // background ghi khi vừa cập nhật mà có cài đặt khác mặc định  // gợi ý bật Chế độ học từ sau bấy nhiêu từ vựng
 
 // ---------- Chế độ hiển thị ----------
 // popup mặc định · cửa sổ riêng (?window=1) · Side Panel (?panel=1).
@@ -56,6 +61,7 @@ const ICON = {
   open: svg('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>'),
   sun: svg('<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'),
   moon: svg('<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'),
+  auto: svg('<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>'),
   globe: svg('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
   block: svg('<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>'),
   pin: svg('<path d="M12 17v5"/><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76z"/><path d="M8 6h8"/>'),
@@ -154,7 +160,22 @@ function autoGrow(ta, max = 140) {
 // closure (buổi ôn, form sửa, nút Hoàn tác) bị "cũ". Luôn tra lại theo id trước khi sửa,
 // nếu không thay đổi sẽ ghi vào object cũ và bị mất (trước đây buổi ôn chỉ lưu thẻ đầu).
 function byId(id) { return words.find(x => x.id === id) || null; }
-function saveSettings() { chrome.storage.local.set({ settings }); }
+// Chỉ ghi các khoá popup vừa đổi (so với bản đã đọc), gộp vào bản MỚI NHẤT trong storage.
+// Trước đây ghi đè cả object → có thể xoá mất thay đổi vừa làm ở thẻ Dịch / trang Cài đặt.
+let settingsSnap = "{}";
+function snapSettings() { settingsSnap = JSON.stringify(settings || {}); }
+function saveSettings() {
+  const old = JSON.parse(settingsSnap);
+  const patch = {};
+  for (const k of new Set([...Object.keys(old), ...Object.keys(settings)])) {
+    if (JSON.stringify(old[k]) !== JSON.stringify(settings[k])) patch[k] = settings[k];
+  }
+  snapSettings();
+  if (!Object.keys(patch).length) return;
+  chrome.storage.local.get("settings", ({ settings: cur }) => {
+    chrome.storage.local.set({ settings: { ...(cur || {}), ...patch } });
+  });
+}
 function save() { chrome.storage.local.set({ words }); }
 
 // ---------- Dịch + phiên âm (dùng cho màn hình Thêm) ----------
@@ -163,7 +184,7 @@ function looksTranslatable(text) {
   if (!t || t.length > 1500) return false;
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return false;
   if (/^(https?:\/\/|www\.)\S+$/i.test(t)) return false;
-  if (isVietnamese(t)) return false;
+  if (isNativeText(t, settings)) return false;
   return /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ぀-ヿ㐀-鿿가-힯]/.test(t);
 }
 const _trCache = new Map();
@@ -207,12 +228,19 @@ function applyTheme() {
   const eff = effectiveTheme();
   document.documentElement.setAttribute("data-theme", eff);
   try { localStorage.setItem("hn-theme", settings.theme || "auto"); } catch (e) {} // cho theme-init.js
+  // Nút hiện chế độ ĐANG dùng; bấm để đổi vòng Tự động → Sáng → Tối → Tự động.
+  // (Trước đây chỉ đổi qua lại Sáng/Tối, bấm một lần là mất "Tự động" mãi.)
+  const t = settings.theme === "light" || settings.theme === "dark" ? settings.theme : "auto";
   const btn = $("themeBtn");
-  btn.innerHTML = eff === "dark" ? ICON.sun : ICON.moon;
-  btn.title = eff === "dark" ? "Chuyển sang giao diện Sáng" : "Chuyển sang giao diện Tối";
+  btn.innerHTML = t === "auto" ? ICON.auto : t === "dark" ? ICON.moon : ICON.sun;
+  const name = { auto: T("Tự động"), light: T("Sáng"), dark: T("Tối") };
+  const next = { auto: "light", light: "dark", dark: "auto" }[t];
+  btn.title = T("Giao diện: {0} — bấm để chuyển sang {1}", name[t], name[next]);
+  btn.setAttribute("aria-label", btn.title);
 }
 $("themeBtn").onclick = () => {
-  settings.theme = effectiveTheme() === "dark" ? "light" : "dark";
+  const t = settings.theme === "light" || settings.theme === "dark" ? settings.theme : "auto";
+  settings.theme = { auto: "light", light: "dark", dark: "auto" }[t];
   saveSettings();
   applyTheme();
 };
@@ -227,7 +255,7 @@ let toastTimer = null;
 function toast(msg, kind = "", action = null) {
   const t = $("toast");
   t.className = "popup-toast" + (kind ? " " + kind : "");
-  t.querySelector(".toast-text").textContent = msg;
+  t.querySelector(".toast-text").textContent = TR(msg);
   const btn = t.querySelector(".toast-act");
   if (action) {
     btn.hidden = false;
@@ -257,9 +285,11 @@ function playListEnter() {
 
 // ---------- Load ----------
 function load() {
-  chrome.storage.local.get(["words", "settings"], (data) => {
+  chrome.storage.local.get(["words", "settings", "__updateReview"], (data) => {
+    updateReview = data.__updateReview || null;
     words = data.words || [];
     settings = data.settings || { defaultThreshold: 20 };
+    snapSettings();
     if (settings.enabled === undefined) settings.enabled = true;
     // Migration: gán lang + type cho mục cũ (mặc định = từ vựng)
     let migrated = false;
@@ -424,9 +454,10 @@ function itemHtml(w) {
   const long = w.term.length > 120;
   const threshold = w.autoDeleteAt || 20;
   const pct = Math.min(100, Math.round(((w.hoverCount || 0) / threshold) * 100));
-  const canSpeak = isVocab && lang !== "vi";
+  const own = sameLang(lang, nativeLang(settings)); // chữ bằng ngôn ngữ của mình: khỏi nhãn / phát âm
+  const canSpeak = isVocab && !own;
   const typeBadge = !isVocab ? `<span class="type-badge" data-vn-type="${vt}">${TYPE_ICON[vt]}${VN_TYPES[vt].label}</span>` : "";
-  const langTag = (isVocab && lang !== "vi") ? `<span class="lang-tag lang-${escapeHtml(lang)}">${escapeHtml(lang.toUpperCase())}</span>` : "";
+  const langTag = (isVocab && !own) ? `<span class="lang-tag lang-${escapeHtml(lang)}">${escapeHtml(lang.toUpperCase())}</span>` : "";
 
   const meta = [];
   if (w.learned) meta.push(`<span class="status-tag"><span class="ico-inl">${isVocab ? ICON.learn : ICON.check}</span> ${doneLabel(w)}</span>`);
@@ -508,6 +539,21 @@ function render() {
     html += `<div class="notice learn-notice"><span>Ôn tập &amp; nhắc nhở giờ <b>tắt mặc định</b> cho popup gọn. Bạn vẫn đang học từ?</span>
       <button data-act="learn-on">Bật lại</button><button data-act="learn-off" class="ghost">Để tắt</button></div>`;
   }
+  // Vừa cập nhật phiên bản → hỏi 1 lần có muốn khôi phục cài đặt gốc (đếm lại ngay lúc này:
+  // nếu người dùng đã tự chỉnh về mặc định thì thôi không hỏi nữa).
+  if (updateReview) {
+    const n = self.HN_CONST.settingsDiff(settings, updateReview.from, self.HN_I18N.resolve).length;
+    if (!n) { chrome.storage.local.remove("__updateReview"); updateReview = null; }
+    else html += `<div class="notice update-notice"><span>${escapeHtml(T("Đã cập nhật lên {0}. Bạn có {1} cài đặt khác mặc định — muốn khôi phục cài đặt gốc?", updateReview.to, n))}</span>
+      <button data-act="update-review">${escapeHtml(T("Xem & chọn"))}</button><button data-act="update-keep" class="ghost">${escapeHtml(T("Giữ nguyên"))}</button></div>`;
+  }
+  // Gợi ý thông minh: đã lưu khá nhiều từ vựng mà chưa bật Chế độ học từ → hỏi MỘT lần.
+  const vocabCount = words.filter(w => !w.sticky && typeOf(w) === "vocab" && w.meaning).length;
+  if (settings.learningMode !== true && !settings.tipLearningAsked && vocabCount >= LEARNING_TIP_AT
+      && !(settings.learningMode === undefined && words.some(w => w.srsLast))) {
+    html += `<div class="notice learn-notice"><span>${escapeHtml(T("Bạn đã lưu {0} từ vựng. Bật Chế độ học từ để ôn tập giãn cách và được nhắc khi đến hạn?", vocabCount))}</span>
+      <button data-act="tip-learn-on">${escapeHtml(T("Bật"))}</button><button data-act="tip-learn-no" class="ghost">${escapeHtml(T("Không, cảm ơn"))}</button></div>`;
+  }
   if (settings.enabled === false) {
     html += `<div class="notice"><span>⏸ Tô sáng đang TẮT trên mọi trang</span><button data-act="enable">Bật lại</button></div>`;
   }
@@ -538,6 +584,12 @@ $("list").addEventListener("click", (e) => {
     case "help": openHelp(); return;
     case "learn-on": setLearning(true); return;
     case "learn-off": setLearning(false); return;
+    case "update-review": openOptions("update"); return;
+    case "update-keep":
+      chrome.storage.local.remove("__updateReview"); updateReview = null; render();
+      toast("Đã giữ nguyên cài đặt của bạn", "success"); return;
+    case "tip-learn-on": settings.tipLearningAsked = true; setLearning(true); return;
+    case "tip-learn-no": settings.tipLearningAsked = true; saveSettings(); render(); return;
   }
   if (!w) return;
   switch (act) {
@@ -1006,7 +1058,7 @@ function showReviewCard() {
   const w = reviewDeck[reviewPos].w;
   $("quizProgress").textContent = `${reviewPos + 1}/${total}`;
   reviewRevealed = false;
-  const canSpeak = langOf(w) !== "vi";
+  const canSpeak = !sameLang(langOf(w), nativeLang(settings));
   card.innerHTML = `
     <div class="q-term">${escapeHtml(w.term)}${canSpeak ? `<button class="spk" id="qSpeak" title="Nghe phát âm" aria-label="Nghe phát âm">${ICON.speak}</button>` : ""}</div>
     <div class="q-ans" hidden>
@@ -1467,12 +1519,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
   if (changes.settings && changes.settings.newValue) {
     settings = changes.settings.newValue;
+    snapSettings();
     applyTheme();
     $("enabledToggle").checked = settings.enabled !== false;
     renderSiteBar();
     if (!changes.words) render();
   }
   if (changes.__lastSync || changes.__driveAccount) refreshSync();
+  if (changes.__updateReview) { updateReview = changes.__updateReview.newValue || null; if (!changes.words) render(); }
   if (changes.words && changes.words.newValue) {
     words = changes.words.newValue;
     render();

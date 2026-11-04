@@ -1,0 +1,20 @@
+{
+  "extName": {
+    "message": "Highlight Note"
+  },
+  "extDesc": {
+    "message": "Bôi đen để dịch nhanh, lưu & tô sáng từ, đoạn văn trên mọi trang web — ghi chú, ôn tập, đồng bộ Google Drive."
+  },
+  "cmd_add_selected_word": {
+    "message": "Lưu & tô sáng phần đang bôi đen"
+  },
+  "cmd_translate_selection": {
+    "message": "Dịch phần đang bôi đen (chỉ xem, không lưu)"
+  },
+  "cmd_open_side_panel": {
+    "message": "Mở Highlight Note ở Side Panel"
+  },
+  "cmd_execute_action": {
+    "message": "Mở Highlight Note"
+  }
+}

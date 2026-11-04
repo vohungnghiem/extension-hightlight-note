@@ -50,6 +50,7 @@
     pin: svgIco('<path d="M12 17v5"/><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76z"/><path d="M8 6h8"/>', 13),
     copy: svgIco('<rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
     help: svgIco('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+    more: svgIco('<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>'),
     gear: svgIco('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>')
   };
 
@@ -70,7 +71,32 @@
   // VN_TYPES & VN_TYPE_COLORS nạp từ constants.js (chạy trước content.js theo manifest).
   const VN_TYPES = self.HN_CONST.VN_TYPES;
   const VN_TYPE_COLORS = self.HN_CONST.VN_TYPE_COLORS;
-  const { detectLang, isVietnamese, isSureVietnamese, speak, dictLink, TARGET_LANGS, viTargetLang, mainTargetLang, sameLang } = self.HN_CONST;
+  const { detectLang, isVietnamese, speak, dictLink, TARGET_LANGS, langName, nativeLang, nativeTargetLang, mainTargetLang,
+    isNativeText, isSureNative, hideSelNative, sameLang } = self.HN_CONST;
+  // Dịch giao diện (i18n.js nạp trước). T("Dịch sang {0}", x) — câu tiếng Việt là khoá.
+  const HN_I18N = self.HN_I18N;
+  const T = HN_I18N ? HN_I18N.t : (s, ...a) => String(s).replace(/\{(\d+)\}/g, (_, i) => a[i]);
+  const uiLang = () => (HN_I18N ? HN_I18N.getLang() : "vi");
+  // UI của mình (thanh, thẻ, tooltip, toast, ghi chú dán) là con trực tiếp của <body> với class
+  // "vocab-note-…" → theo dõi riêng từng khối đó (KHÔNG quan sát cả trang web, đỡ tốn).
+  // Nội dung người dùng (từ, nghĩa, ghi chú, bản dịch) nằm trong selector skip → không bị dịch.
+  function i18nWatchUi() {
+    if (!HN_I18N || uiLang() === "vi" || !document.body) return;
+    for (const n of document.body.children) {
+      if (typeof n.className === "string" && /\bvocab-note-(?!highlight)/.test(n.className)) HN_I18N.watch(n);
+    }
+  }
+  if (HN_I18N) {
+    HN_I18N.setSkip(".vn-mini-term, .vn-sel-trans, .vn-tr-word b, .vn-tr-src, .vn-term-text, .vn-meaning, .vn-note, .vn-tag, .vn-phonetic, .vn-mini-phonetic, .vns-text");
+    const rootObs = new MutationObserver(() => i18nWatchUi());
+    const startObs = () => { if (document.body) rootObs.observe(document.body, { childList: true }); };
+    if (document.body) startObs(); else document.addEventListener("DOMContentLoaded", startObs, { once: true });
+  }
+  function applyUiLang() {
+    if (!HN_I18N) return;
+    const l = HN_I18N.resolve(settings);
+    if (l !== uiLang()) { HN_I18N.setLang(l); i18nWatchUi(); }
+  }
   const vnTypeOf = (w) => (w && VN_TYPES[w.type]) ? w.type : "vocab";
   // Nhãn "hoàn tất" theo ngữ cảnh loại (vocab: đã thuộc; todo: đã xong; khác: đã xử lý)
   const vnDoneLabel = (w) => {
@@ -85,8 +111,9 @@
 
   // Mở trang Cài đặt / Hướng dẫn (nhờ background mở giúp — content script không
   // gọi trực tiếp được openOptionsPage / chrome.tabs).
-  function openExtPage(which) {
-    try { chrome.runtime.sendMessage({ type: which === "welcome" ? "OPEN_WELCOME" : "OPEN_OPTIONS" }); } catch (e) {}
+  // section: mục trong Cài đặt (vd "selection#showSelButton" → mở đúng mục và làm nổi dòng đó).
+  function openExtPage(which, section) {
+    try { chrome.runtime.sendMessage({ type: which === "welcome" ? "OPEN_WELCOME" : "OPEN_OPTIONS", section }); } catch (e) {}
   }
 
   // Icon thương hiệu — gắn vào tooltip & toast để người dùng nhận ra đây là của
@@ -110,8 +137,8 @@
     previewTranslate: true,  // dịch nhanh khi bôi đen (xem trước trước khi lưu)
     showSelButton: true,     // hiện thanh nổi khi bôi đen text
     showSelCopy: true,       // nút Sao chép trên thanh nổi
-    showSelSpeak: true,      // nút Phát âm trên thanh nổi
-    hideSelVietnamese: false // true: không hiện thanh khi bôi chữ tiếng Việt
+    showSelSpeak: true       // nút Phát âm trên thanh nổi
+    // hideSelNative / nativeLang / targetLang / nativeTargetLang: đọc qua hàm trong constants.js
   };
   let wordMap = new Map(); // termLower -> word object
   // Chế độ học từ đang bật (và có từ vựng) → mới hiện thanh tiến độ "1/20" và nút
@@ -171,6 +198,7 @@
     chrome.storage.local.get(["words", "settings"], (data) => {
       words = data.words || [];
       settings = { ...settings, ...(data.settings || {}) };
+      applyUiLang();
       rebuildIndex();
       cb && cb();
     });
@@ -293,7 +321,7 @@
   // nổi, toast…) — trước đây chữ trong ghi chú dán trang bị bọc span lung tung.
   const SKIP_CLASSES = [
     "vocab-note-highlight", "vocab-note-tooltip", "vocab-note-toast", "vocab-note-toast-stack",
-    "vocab-note-modal-overlay", "vocab-note-mini-card", "vocab-note-sel-btn", "vocab-note-sticky-layer"
+    "vocab-note-modal-overlay", "vocab-note-mini-card", "vocab-note-sel-btn", "vocab-note-sel-menu", "vocab-note-sticky-layer"
   ];
   function shouldSkip(node) {
     let p = node.parentNode;
@@ -911,10 +939,10 @@
     // Từ điển theo ngôn ngữ: JA→Jisho, EN→Cambridge, ZH→Hanzii, KO→Naver, còn lại→Wiktionary.
     const dict = dictLink(w.term, lang);
     const dictUrl = dict.url, dictTitle = "Tra " + dict.title;
-    const trUrl = `https://translate.google.com/?sl=auto&tl=vi&text=${encodeURIComponent(w.term)}`;
+    const trUrl = `https://translate.google.com/?sl=auto&tl=${mainTargetLang(settings)}&text=${encodeURIComponent(w.term)}`;
     // Phát âm / tra từ điển chỉ có ý nghĩa với từ vựng; Google Dịch hữu ích với
     // mọi mục chữ nước ngoài. Mục chữ Việt (việc cần làm, ghi chú…) → header gọn.
-    const foreign = lang !== "vi";
+    const foreign = !sameLang(lang, nativeLang(settings));
     const headBtns =
       (isVocab ? `<button class="vn-icon-btn vn-speak" title="Phát âm" aria-label="Phát âm">${VN_ICON.speak}</button>` : "") +
       (isVocab ? `<a class="vn-icon-btn" href="${dictUrl}" target="_blank" rel="noopener" title="${dictTitle}" aria-label="${dictTitle}">${VN_ICON.book}</a>` : "") +
@@ -1161,7 +1189,7 @@
   // Có nên TỰ dịch sang tiếng Việt không (xem trước / điền sẵn nghĩa khi lưu).
   function looksTranslatable(text, maxLen = SEL_TRANSLATE_MAX) {
     const t = (text || "").trim();
-    if (!t || t.length > maxLen || isEmailOrUrl(t) || isSureVietnamese(t)) return false;
+    if (!t || t.length > maxLen || isEmailOrUrl(t) || isSureNative(t, settings)) return false;
     return HAS_LETTER.test(t);
   }
   // Nút "Dịch" có ý nghĩa không — kể cả chữ Việt (khi đó dịch sang tiếng Anh).
@@ -1169,10 +1197,10 @@
     const t = (text || "").trim();
     return !!t && t.length <= SEL_MAX && !isEmailOrUrl(t) && HAS_LETTER.test(t);
   }
-  // Đích dịch: chữ Việt → tiếng Anh, còn lại → tiếng Việt.
-  function targetLangFor(text) { return isVietnamese(text) ? viTargetLang(settings) : mainTargetLang(settings); }
+  // Đích dịch: chữ của mình (ngôn ngữ của bạn) → nativeTargetLang; chữ nước ngoài → targetLang.
+  function targetLangFor(text) { return isNativeText(text, settings) ? nativeTargetLang(settings) : mainTargetLang(settings); }
   // Chữ đã ở đúng ngôn ngữ đích (vd chữ Anh mà đích là Anh) → dịch sang ngôn ngữ phụ.
-  function fallbackTarget(tl) { return sameLang(tl, "vi") ? "en" : "vi"; }
+  function fallbackTarget(tl) { return sameLang(tl, nativeLang(settings)) ? nativeTargetLang(settings) : nativeLang(settings); }
   function saveSettingPatch(patch) {
     try {
       chrome.storage.local.get("settings", ({ settings: s }) => {
@@ -1192,33 +1220,41 @@
     if (!t) return "vocab";
     if (/^(https?:\/\/|www\.)\S+/i.test(t)) return "reference";
     if (t.length > HIGHLIGHT_MAX || t.split(" ").length > 6) return "important";
-    return isVietnamese(t) ? "important" : "vocab";
+    return isNativeText(t, settings) ? "important" : "vocab";
   }
 
+  // Thanh nổi: [Dịch | nghĩa ›] [Lưu] (+ Nghe, Sao chép, ⋯ khi rê chuột).
+  // Nghĩa nằm NGAY TRONG nút Dịch: chưa có nghĩa → "Dịch"; có nghĩa (xem trước / đã lưu) → "may mắn ›",
+  // bấm để mở thẻ chi tiết. Trước đây nghĩa và nút "Dịch" đứng cạnh nhau → nút Dịch thừa, gây hiểu
+  // là "chưa dịch". Dùng chung 1 nút (không ẩn nút đi) vì nghĩa về sau ~0.2s: ẩn nút lúc đó là nút
+  // biến mất dưới con trỏ. Không có logo: thanh cần gọn nhất; nhận diện nằm ở thẻ / tooltip / menu ⋯.
+  function trTitle(text, hasMeaning, saved) {
+    if (saved) return T("Nghĩa đã lưu — bấm để xem chi tiết") + " (Alt+Shift+D)";
+    if (hasMeaning) return T("Xem chi tiết: phiên âm, nghe, từ điển, đổi ngôn ngữ") + " (Alt+Shift+D)";
+    return (isNativeText(text, settings)
+      ? T("Dịch sang {0}", langName(targetLangFor(text), uiLang()).replace(/^Tiếng /, "tiếng "))
+      : T("Xem bản dịch — không lưu")) + " (Alt+Shift+D)";
+  }
   function buildSelBtn(text) {
     const existing = findWordByText(text);
-    const brand = `<img class="vn-sel-brand" src="${BRAND_ICON}" alt="" draggable="false">`;
+    const savedMeaning = existing && existing.meaning ? existing.meaning : "";
     // Phát âm chỉ với từ/cụm ngắn (đọc cả đoạn dài vừa vô nghĩa vừa lâu).
     const speakBtn = (settings.showSelSpeak !== false && text.length <= 60)
       ? `<button class="vn-sel-ico vn-sel-speak" title="Phát âm" aria-label="Phát âm">${VN_ICON.speak}</button>` : "";
     const copyBtn = (settings.showSelCopy !== false)
       ? `<button class="vn-sel-ico vn-sel-copy" title="Sao chép" aria-label="Sao chép">${VN_ICON.copy}</button>` : "";
     const trBtn = canTranslate(text)
-      ? `<button class="vn-sel-act vn-sel-tr" title="${isVietnamese(text) ? "Dịch sang " + ((TARGET_LANGS.find(t => t.code === targetLangFor(text)) || {}).label || "tiếng Anh").replace("Tiếng ", "tiếng ") : "Xem bản dịch — không lưu"} (Alt+Shift+D)">${VN_ICON.translate}<span>Dịch</span></button>` : "";
-    let lead = brand, saveBtn = "";
+      ? `<button class="vn-sel-act vn-sel-tr" title="${escapeHtml(trTitle(text, !!savedMeaning, !!savedMeaning))}">${VN_ICON.translate}<span class="vn-sel-tr-label">Dịch</span><span class="vn-sel-trans">${escapeHtml(savedMeaning)}</span><span class="vn-sel-chev" aria-hidden="true">›</span></button>`
+      : "";
+    let saveBtn = "";
     if (existing) {
-      // Đã lưu rồi → nhắc luôn nghĩa đã ghi.
-      if (existing.meaning) lead += `<span class="vn-sel-trans" title="Nghĩa đã lưu">${escapeHtml(existing.meaning)}</span>`;
       saveBtn = `<button class="vn-sel-act vn-sel-saved" disabled title="Đã có trong Highlight Note">${VN_ICON.save}<span>Đã lưu</span></button>`;
-    } else {
-      if (looksTranslatable(text)) lead += `<span class="vn-sel-trans" title="Bấm để xem bản dịch đầy đủ"></span>`;
-      if (text.length <= SAVE_MAX) {
-        saveBtn = `<button class="vn-sel-act vn-sel-save" title="Lưu & tô sáng mỗi khi gặp lại (Alt+Shift+H)">${VN_ICON.highlighter}<span>Lưu</span></button>`;
-      }
+    } else if (text.length <= SAVE_MAX) {
+      saveBtn = `<button class="vn-sel-act vn-sel-save" title="Lưu & tô sáng mỗi khi gặp lại (Alt+Shift+H)">${VN_ICON.highlighter}<span>Lưu</span></button>`;
     }
     selBtn.className = "vocab-note-sel-btn" + (existing ? " vn-sel-exists" : "");
-    // Logo + nghĩa nằm trong "lead"; CSS tự ẩn lead khi chưa/không có nghĩa để hiện.
-    selBtn.innerHTML = `<span class="vn-sel-lead">${lead}</span>${trBtn}${saveBtn}${speakBtn}${copyBtn}`;
+    const moreBtn = `<button class="vn-sel-ico vn-sel-more" title="Tuỳ chỉnh thanh này" aria-label="Tuỳ chỉnh thanh này" aria-haspopup="menu">${VN_ICON.more}</button>`;
+    selBtn.innerHTML = `${trBtn}${saveBtn}${speakBtn}${copyBtn}${moreBtn}`;
   }
 
   // Phát âm đoạn đang chọn (theo ngôn ngữ nhận diện được).
@@ -1319,12 +1355,12 @@
     if (target.closest(".vn-sel-copy")) return "copy";
     if (target.closest(".vn-sel-save")) return "save";
     if (target.closest(".vn-sel-tr")) return "translate";
-    // Bấm vào nghĩa xem trước → mở bản dịch đầy đủ
-    if (target.closest(".vn-sel-lead") && selBtn && !selBtn.classList.contains("vn-sel-exists")
-        && selBtn.querySelector(".vn-sel-trans:not(:empty)")) return "translate";
+    if (target.closest(".vn-sel-more")) return "more";
     return null;
   }
   function runBarAction(a) {
+    if (a !== "more") barIgnored = 0; // có dùng thanh → không gợi ý tắt
+    if (a === "more") { toggleSelMenu(); return; }
     if (a === "speak") doSpeakSelection();
     else if (a === "copy") doCopySelection();
     else if (a === "save") doSaveSelection();
@@ -1372,12 +1408,14 @@
   // Đổi nội dung thanh (bản dịch xem trước về) mà GIỮ NGUYÊN chỗ nút Dịch/Lưu: chỉ phần nghĩa
   // bên trái co giãn, nút không trôi dưới con trỏ.
   function reflowKeepingActions(change) {
+    // Giữ nguyên chỗ nút LƯU: nút Dịch giãn sang TRÁI để chứa nghĩa → chỗ chữ "Dịch" cũ vẫn
+    // thuộc nút Dịch, nút Lưu không xê dịch → con trỏ đang nhắm nút nào vẫn trúng nút đó.
     const btn = selBtn;
-    const trBtn = btn && btn.querySelector(".vn-sel-tr");
-    const x0 = trBtn ? trBtn.getBoundingClientRect().left : null;
+    const anchor = btn && (btn.querySelector(".vn-sel-save, .vn-sel-saved") || btn.querySelector(".vn-sel-tr"));
+    const x0 = anchor ? anchor.getBoundingClientRect().left : null;
     change();
     if (x0 == null || !btn) return;
-    const dx = trBtn.getBoundingClientRect().left - x0;
+    const dx = anchor.getBoundingClientRect().left - x0;
     if (dx) btn.style.left = Math.max(8, (parseFloat(btn.style.left) || 0) - dx) + "px";
   }
 
@@ -1449,38 +1487,111 @@
     buildSelBtn(text);
     btn.style.display = "flex";
     positionSelBtn(rect);
+    noteBarShown();
 
     // Xem trước nghĩa (chỉ từ/cụm ngắn chưa lưu, còn mạng, người dùng cho phép)
     const transEl = btn.querySelector(".vn-sel-trans");
     if (!transEl || findWordByText(text)) return;
     if (settings.previewTranslate === false) return;
     const cached = selTransCache.get(text);
-    if (cached) {
-      reflowKeepingActions(() => { transEl.textContent = cached; });
-      return;
-    }
+    const trB = btn.querySelector(".vn-sel-tr");
+    const showMeaning = (tr) => reflowKeepingActions(() => {
+      transEl.textContent = tr;
+      if (trB) trB.title = trTitle(text, !!tr, false);
+    });
+    if (cached) { showMeaning(cached); return; }
     if (typeof navigator !== "undefined" && navigator.onLine === false) return;
-    transEl.textContent = "…";
-    transEl.classList.add("vn-sel-loading");
+    // Đang chờ: nút vẫn là "Dịch" (không chèn "…" làm thanh nhảy 2 lần).
     const myToken = ++selBtnToken;
     autoTranslate(text, detectLang(text)).then(tr => {
       // Bỏ qua nếu user đã chọn từ khác trong lúc chờ
       if (myToken !== selBtnToken || selBtnCurrentText !== text) return;
-      reflowKeepingActions(() => {
-        transEl.classList.remove("vn-sel-loading");
-        if (isRealTranslation(text, tr)) {
-          selTransCache.set(text, tr);
-          transEl.textContent = tr;
-        } else {
-          transEl.textContent = "";
-        }
-      });
+      if (isRealTranslation(text, tr)) { selTransCache.set(text, tr); showMeaning(tr); }
     });
   }
 
   function hideSelBtn() {
     if (selBtn) selBtn.style.display = "none";
     selBtnCurrentText = "";
+    hideSelMenu();
+  }
+
+  // ---------- Menu ⋯ của thanh nổi: chỉnh NGAY tại chỗ, khỏi phải đi tìm trong Cài đặt ----------
+  let selMenu = null;
+  function hideSelMenu() { if (selMenu) { selMenu.remove(); selMenu = null; } }
+  // Tắt thanh nổi (mọi trang) — có Hoàn tác và đường tới Cài đặt.
+  function turnOffSelBar() {
+    hideSelBtn();
+    settings.showSelButton = false;
+    saveSettingPatch({ showSelButton: false });
+    showToast(T("Đã tắt thanh Dịch / Lưu. Vẫn dùng được Alt+Shift+D, Alt+Shift+H và chuột phải."), {
+      actions: [
+        { label: T("Hoàn tác"), onClick: () => { settings.showSelButton = true; saveSettingPatch({ showSelButton: true }); } },
+        { label: T("Cài đặt"), onClick: () => openExtPage("options", "selection#showSelButton") }
+      ], duration: 8000
+    });
+  }
+  function turnOffHere() {
+    hideSelBtn();
+    const host = location.hostname.replace(/^www\./, "");
+    const list = (settings.blacklistedHosts || []).slice();
+    if (!host || list.includes(host)) return;
+    saveSettingPatch({ blacklistedHosts: [...list, host] });
+    showToast(T("Đã tắt Highlight Note trên \"{0}\"", host), {
+      actions: [{ label: T("Hoàn tác"), onClick: () => saveSettingPatch({ blacklistedHosts: list }) }], duration: 8000
+    });
+  }
+  function toggleSelMenu() {
+    if (selMenu) { hideSelMenu(); return; }
+    if (!selBtn) return;
+    selMenu = document.createElement("div");
+    selMenu.className = "vocab-note-sel-menu";
+    selMenu.setAttribute("role", "menu");
+    const item = (act, label) => `<button role="menuitem" data-act="${act}">${escapeHtml(label)}</button>`;
+    selMenu.innerHTML =
+      `<div class="vn-sel-menu-head"><img src="${BRAND_ICON}" alt="" draggable="false">Highlight Note</div>` +
+      item("off-here", T("Tắt Highlight Note trên trang này")) +
+      item("off-bar", T("Tắt thanh này (mọi trang)")) +
+      `<div class="vn-sel-menu-sep"></div>` +
+      item("set-lang", T("Đổi ngôn ngữ dịch…")) +
+      item("set-bar", T("Tuỳ chỉnh thanh (nút, xem trước nghĩa)…"));
+    selMenu.addEventListener("mousedown", (e) => { e.preventDefault(); e.stopPropagation(); });
+    selMenu.addEventListener("mouseup", (e) => e.stopPropagation());
+    selMenu.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const b = e.target.closest("button[data-act]");
+      if (!b) return;
+      const a = b.dataset.act;
+      hideSelMenu();
+      if (a === "off-here") turnOffHere();
+      else if (a === "off-bar") turnOffSelBar();
+      else if (a === "set-lang") { hideSelBtn(); openExtPage("options", "language"); }
+      else if (a === "set-bar") { hideSelBtn(); openExtPage("options", "selection"); }
+    });
+    document.body.appendChild(selMenu);
+    const r = selBtn.getBoundingClientRect();
+    const mw = selMenu.offsetWidth, mh = selMenu.offsetHeight;
+    let top = r.bottom + 6;
+    if (top + mh > window.innerHeight - 6) top = Math.max(6, r.top - mh - 6);
+    selMenu.style.top = top + "px";
+    selMenu.style.left = Math.max(6, Math.min(r.right - mw, window.innerWidth - mw - 6)) + "px";
+  }
+
+  // Gợi ý thông minh: thanh hiện nhiều lần mà người dùng không bấm gì → có thể thanh đang
+  // vướng (vd người hay bôi đen để chép). Hỏi MỘT lần duy nhất, không tự tắt.
+  const BAR_IGNORE_HINT = 15;
+  let barIgnored = 0;
+  function noteBarShown() {
+    if (settings.tipBarAsked || settings.showToasts === false) return;
+    if (++barIgnored < BAR_IGNORE_HINT) return;
+    settings.tipBarAsked = true;
+    saveSettingPatch({ tipBarAsked: true });
+    showToast(T("Thanh Dịch / Lưu có làm phiền bạn không? Bạn có thể tắt nó ở đây hoặc chỉ trên trang này."), {
+      actions: [
+        { label: T("Tắt trên trang này"), onClick: turnOffHere },
+        { label: T("Tắt thanh"), onClick: turnOffSelBar }
+      ], duration: 12000
+    });
   }
 
   // ---------- Thẻ DỊCH (chỉ xem, không lưu) ----------
@@ -1495,8 +1606,9 @@
     document.querySelectorAll(".vocab-note-mini-card").forEach(el => el.remove());
     dismissTooltipForUi();
     let tl = targetLangFor(text);
-    // fromVi chỉ là ĐOÁN ban đầu; Google Dịch nhận diện ngôn ngữ thật rồi sửa lại (xem runTranslate).
-    let fromVi = isVietnamese(text);
+    // fromNative chỉ là ĐOÁN ban đầu; Google Dịch nhận diện ngôn ngữ thật rồi sửa lại (xem runTranslate).
+    let fromNative = isNativeText(text, settings);
+    const native = nativeLang(settings);
     const isWord = text.length <= SEL_TRANSLATE_MAX && text.split(/\s+/).length <= 4;
     let srcLang = detectedLangOf(text) || detectLang(text);
     const existing = findWordByText(text);
@@ -1511,6 +1623,7 @@
         <span class="vn-tr-title">Dịch</span>
         <span class="vn-tr-langs"><span class="vn-tr-sl">${escapeHtml(srcLang.toUpperCase())}</span> → <select class="vn-tr-tl" title="Chọn ngôn ngữ muốn dịch sang" aria-label="Dịch sang ngôn ngữ"></select></span>
         <span class="vn-tr-space"></span>
+        <button class="vn-mini-ibtn vn-mini-gear" title="Cài đặt ngôn ngữ dịch" aria-label="Cài đặt ngôn ngữ dịch">${VN_ICON.gear}</button>
         <button class="vn-mini-ibtn vn-mini-x" title="Đóng (Esc)" aria-label="Đóng">${VN_ICON.close}</button>
       </div>
       <div class="vn-tr-body">
@@ -1523,9 +1636,9 @@
       </div>
       <div class="vn-tr-foot">
         <button class="vn-tr-btn vn-tr-copy" title="Sao chép bản dịch" disabled>${VN_ICON.copy}<span>Sao chép</span></button>
-        <button class="vn-tr-btn vn-tr-listen" title="Nghe bản dịch" disabled${tl === "vi" ? " hidden" : ""}>${VN_ICON.speak}<span>Nghe</span></button>
+        <button class="vn-tr-btn vn-tr-listen" title="Nghe bản dịch" disabled${sameLang(tl, native) ? " hidden" : ""}>${VN_ICON.speak}<span>Nghe</span></button>
         <a class="vn-tr-btn" href="https://translate.google.com/?sl=auto&tl=${tl}&text=${encodeURIComponent(text.slice(0, 4000))}" target="_blank" rel="noopener" title="Mở trong Google Dịch">${VN_ICON.globe}<span>Google</span></a>
-        ${isWord ? `<a class="vn-tr-btn vn-tr-dict" href="${dict.url}" target="_blank" rel="noopener" title="Tra ${dict.title}"${fromVi ? " hidden" : ""}>${VN_ICON.book}</a>` : ""}
+        ${isWord ? `<a class="vn-tr-btn vn-tr-dict" href="${dict.url}" target="_blank" rel="noopener" title="Tra ${dict.title}"${fromNative ? " hidden" : ""}>${VN_ICON.book}</a>` : ""}
         <span class="vn-tr-space"></span>
         ${existing
           ? `<span class="vn-tr-saved">${VN_ICON.save} Đã lưu</span>`
@@ -1543,14 +1656,15 @@
     if (sp) sp.onclick = () => speak(text, srcLang);
     const tlSel = card.querySelector(".vn-tr-tl");
     if (tlSel) tlSel.onchange = () => {
-      // Mỗi hướng nhớ riêng: chữ Việt → viTargetLang; chữ nước ngoài → targetLang.
-      const key = fromVi ? "viTargetLang" : "targetLang";
+      // Mỗi hướng nhớ riêng: chữ của mình → nativeTargetLang; chữ nước ngoài → targetLang.
+      const key = fromNative ? "nativeTargetLang" : "targetLang";
       settings[key] = tlSel.value;
       saveSettingPatch({ [key]: tlSel.value });
       selTransCache.clear(); // nghĩa xem trước đã nhớ là của ngôn ngữ đích cũ
       closeCard();
       openTranslateCard(text, anchorRect, anchorCtx); // dịch lại sang ngôn ngữ vừa chọn
     };
+    card.querySelector(".vn-mini-gear").onclick = () => { closeCard(); openExtPage("options", "language"); };
     const listenBtn = card.querySelector(".vn-tr-listen");
     if (listenBtn) listenBtn.onclick = () => { if (translation) speak(translation, tl); };
 
@@ -1603,21 +1717,21 @@
     // Ô chọn ngôn ngữ đích (chữ Việt thì bỏ "Việt" khỏi danh sách).
     function fillLangSelect() {
       if (!tlSel) return;
-      tlSel.innerHTML = TARGET_LANGS.filter(t => !(fromVi && t.code === "vi"))
-        .map(t => `<option value="${t.code}"${t.code === tl ? " selected" : ""}>${escapeHtml(t.short || t.label)}</option>`).join("");
+      tlSel.innerHTML = TARGET_LANGS.filter(t => !(fromNative && sameLang(t.code, native)))
+        .map(t => `<option value="${t.code}"${t.code === tl ? " selected" : ""}>${escapeHtml(langName(t.code, uiLang(), true))}</option>`).join("");
     }
     fillLangSelect();
     function syncCardToTarget() {
       fillLangSelect();
-      if (listenBtn) listenBtn.hidden = sameLang(tl, "vi");
+      if (listenBtn) listenBtn.hidden = sameLang(tl, native);
       const gl = card.querySelector('a[href*="translate.google.com"]');
       if (gl) gl.href = googleTranslateUrl(text, tl);
       const dictEl = card.querySelector(".vn-tr-dict");
       if (dictEl) {
         const d = dictLinkFor(text, srcLang);
-        dictEl.hidden = fromVi;
+        dictEl.hidden = fromNative;
         dictEl.href = d.url;
-        dictEl.title = "Tra " + d.title;
+        dictEl.title = T("Tra {0}", d.title);
       }
     }
 
@@ -1632,9 +1746,9 @@
         if (dl) srcLang = dl;
         if (dl && fixes < 2) {
           let next = null;
-          if (sameLang(dl, "vi") && !fromVi) { fromVi = true; next = viTargetLang(settings); }          // thật ra là chữ Việt
-          else if (!sameLang(dl, "vi") && fromVi) { fromVi = false; next = mainTargetLang(settings); }   // không phải chữ Việt (vd Pháp)
-          else if (sameLang(dl, tl)) { next = fromVi ? viTargetLang(settings) : fallbackTarget(tl); }    // đã đúng ngôn ngữ đích
+          if (sameLang(dl, native) && !fromNative) { fromNative = true; next = nativeTargetLang(settings); }        // thật ra là chữ của mình
+          else if (!sameLang(dl, native) && fromNative) { fromNative = false; next = mainTargetLang(settings); }  // không phải (vd Pháp)
+          else if (sameLang(dl, tl)) { next = fromNative ? nativeTargetLang(settings) : fallbackTarget(tl); }    // đã đúng ngôn ngữ đích
           if (next) {
             fixes++;
             const changed = next !== tl;
@@ -1655,6 +1769,7 @@
         if (isRealTranslation(text, tr)) {
           translation = tr;
           out.textContent = tr;
+          out.setAttribute("data-hn-raw", ""); // bản dịch: không đưa qua bảng dịch giao diện
           copyBtn.disabled = false;
           if (listenBtn) listenBtn.disabled = false;
           if (isWord && sameLang(tl, mainTargetLang(settings))) selTransCache.set(text, tr);
@@ -1698,7 +1813,7 @@
     // Alt+Shift+H hoặc chuột phải → "Tô sáng & lưu").
     if (settings.showSelButton === false) { hideSelBtn(); return; }
     if (target && target.closest && target.closest(
-      ".vocab-note-sel-btn, .vocab-note-mini-card, .vocab-note-tooltip, .vocab-note-modal-overlay"
+      ".vocab-note-sel-btn, .vocab-note-sel-menu, .vocab-note-mini-card, .vocab-note-tooltip, .vocab-note-modal-overlay"
     )) return;
     setTimeout(() => {
       const sel = window.getSelection();
@@ -1708,7 +1823,7 @@
       // Bỏ qua nếu chỉ chọn 1 ký tự hoặc quá dài
       if (!text || text.length < 2 || text.length > SEL_MAX) { hideSelBtn(); return; }
       // Người dùng chọn không hiện thanh khi bôi chữ tiếng Việt (vẫn lưu được bằng phím tắt / chuột phải).
-      if (settings.hideSelVietnamese === true && isVietnamese(text)) { hideSelBtn(); return; }
+      if (hideSelNative(settings) && isNativeText(text, settings)) { hideSelBtn(); return; }
       try {
         const range = sel.getRangeAt(0);
         const rect = range.getBoundingClientRect();
@@ -1987,6 +2102,7 @@
     // Công tắc tắt toast là công tắc DUY NHẤT: tắt = ẩn TẤT CẢ toast (kể cả toast
     // có nút hành động như "Hoàn tác"). Bật = mọi toast hoạt động bình thường.
     if (settings.showToasts === false) return;
+    if (HN_I18N) msg = HN_I18N.tr(msg);
 
     // ok = xanh lá, warn = vàng, undo = trung tính (thao tác xoá, đừng nhầm với "thành công").
     const kind = opts.warn ? "warn" : opts.undo ? "undo" : "ok";
@@ -2281,12 +2397,12 @@
     const setLang = (l) => {
       lang = l;
       langEl.textContent = (l || "").toUpperCase();
-      langEl.style.display = l && l !== "vi" ? "" : "none";
-      speakBtn.style.display = (l === "vi" || isLong) ? "none" : "";
+      langEl.style.display = l && !sameLang(l, nativeLang(settings)) ? "" : "none";
+      speakBtn.style.display = (sameLang(l, nativeLang(settings)) || isLong) ? "none" : "";
     };
     setLang(lang);
     speakBtn.onclick = () => speak(term, lang);
-    card.querySelector(".vn-mini-gear").onclick = () => openExtPage("options");
+    card.querySelector(".vn-mini-gear").onclick = () => { closeCard(); openExtPage("options", "selection"); };
 
     const setStatus = (text, kind) => {
       statusEl.textContent = text || "";
@@ -2365,7 +2481,7 @@
         });
       };
     } else if (!translatable) {
-      meaningInput.placeholder = isVietnamese(term) ? "Ghi chú / mô tả cho mục này (tuỳ chọn)" : "Nhập nghĩa / ghi chú (tuỳ chọn)";
+      meaningInput.placeholder = isNativeText(term, settings) ? "Ghi chú / mô tả cho mục này (tuỳ chọn)" : "Nhập nghĩa / ghi chú (tuỳ chọn)";
     } else if (prefetchedMeaning) {
       meaningInput.value = prefetchedMeaning;
       setStatus("Bản dịch tự động — sửa thoải mái trước khi lưu");
@@ -2554,18 +2670,25 @@
     let needRescan = false;
     if (changes.settings) {
       settings = { ...settings, ...(changes.settings.newValue || {}) };
+      applyUiLang();
       // Tắt extension / tắt thanh "Lưu" → ẩn ngay thanh chọn đang hiển thị
       if (settings.enabled === false || settings.showSelButton === false
-        || (settings.hideSelVietnamese === true && isVietnamese(selBtnCurrentText))) hideSelBtn();
+        || (hideSelNative(settings) && isNativeText(selBtnCurrentText, settings))) hideSelBtn();
       // Áp ngay màu/kiểu/độ dày highlight (kể cả khi không đổi danh sách từ)
       applyHighlightVars();
       learningOn = self.HN_CONST.reviewState(words, settings).eligible; // bật/tắt chế độ học từ
+      // Dựng lại chỉ mục: công tắc tổng (enabled) và "phân biệt hoa/thường" nằm trong regex.
+      // Trước đây không dựng lại → tắt ở popup mà các tab đang mở vẫn tô sáng.
+      if (!changes.words) rebuildIndex();
       // Kiểm tra blacklist trang hiện tại
       if (isHostBlacklisted()) {
         hideSelBtn();
         removeAllHighlights();
         words = changes.words ? (changes.words.newValue || []) : words;
         rebuildIndex();
+        // Bỏ regex: nếu không, MutationObserver thấy text vừa gỡ highlight là "nội dung mới"
+        // và tô lại ngay → "Tắt ở đây" trông như không có tác dụng.
+        combinedRegex = null;
         renderStickyNotes(); // sẽ tự gỡ lớp note vì trang bị blacklist
         return;
       }

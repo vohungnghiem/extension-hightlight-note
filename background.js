@@ -1,13 +1,81 @@
 // Service worker: context menu, phím tắt, badge, sao lưu tự động
 // + đồng bộ THỦ CÔNG qua Google Drive (gộp từng mục — xem sync.js)
 
-importScripts("constants.js", "sync.js");
+importScripts("i18n-en.js", "i18n.js", "constants.js", "sync.js");
+const T = HN_I18N.t;
 
 const MENU_ID = "vocab-note-add-selection";
 const MENU_ID_STICKY = "vocab-note-add-sticky";
 const MENU_ID_PANEL = "vocab-note-open-panel";
 const MENU_ID_TR = "vocab-note-translate";
-const CONTENT_FILES = ["constants.js", "content.js"];
+const CONTENT_FILES = ["i18n-en.js", "i18n.js", "constants.js", "content.js"];
+
+// Ngôn ngữ giao diện cho menu chuột phải / tiêu đề icon. Đổi trong Cài đặt → dựng lại menu.
+// Mỗi lần service worker thức dậy chỉ cần đặt lại ngôn ngữ; menu đã tạo vẫn còn nên chỉ dựng
+// lại khi cài / cập nhật (force) hoặc khi người dùng đổi ngôn ngữ giao diện.
+let menuLang = null;
+async function syncUiLang(force) {
+  const { settings } = await chrome.storage.local.get("settings");
+  const l = HN_I18N.resolve(settings || {});
+  HN_I18N.setLang(l);
+  if (force || (menuLang && l !== menuLang)) createMenus();
+  menuLang = l;
+}
+syncUiLang(false);
+function createMenus() {
+  // removeAll trước khi create: onInstalled cũng chạy khi CẬP NHẬT phiên bản,
+  // tạo lại cùng id sẽ ném lỗi "duplicate id". Dọn sạch rồi tạo mới cho chắc.
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({ id: MENU_ID_TR, title: T("Dịch “%s” (Highlight Note)"), contexts: ["selection"] });
+    chrome.contextMenus.create({ id: MENU_ID, title: T("Lưu & tô sáng “%s” (Highlight Note)"), contexts: ["selection"] });
+    // Ghim ghi chú lên trang — không cần bôi đen chữ nào (hiện khi chuột phải vùng trống).
+    chrome.contextMenus.create({ id: MENU_ID_STICKY, title: T("📌 Ghim ghi chú lên trang này (Highlight Note)"), contexts: ["page"] });
+    // Chuột phải vào icon extension → mở bảng quản lý cạnh trang.
+    chrome.contextMenus.create({ id: MENU_ID_PANEL, title: T("Mở Highlight Note ở Side Panel"), contexts: ["action"] });
+  });
+}
+
+// Cài đặt mặc định cho lần cài MỚI: theo ngôn ngữ trình duyệt / múi giờ.
+// Người Việt (trình duyệt tiếng Việt hoặc múi giờ Việt Nam) → y như trước: ngôn ngữ của bạn = Việt.
+function defaultLangSettings() {
+  const ui = HN_I18N.resolve({});
+  let native = "vi";
+  if (ui !== "vi") {
+    const nav = String((self.navigator && navigator.language) || "en");
+    const hit = HN_CONST.TARGET_LANGS.find(t => t.code.toLowerCase() === nav.toLowerCase())
+      || HN_CONST.TARGET_LANGS.find(t => HN_CONST.sameLang(t.code, nav));
+    native = hit ? hit.code : "en";
+  }
+  return { uiLang: "auto", nativeLang: native, targetLang: native, nativeTargetLang: HN_CONST.defaultNativeTarget(native) };
+}
+
+// Sau khi cập nhật: chỉ hỏi khi THẬT SỰ có cài đặt khác mặc định (so theo hiệu lực, vd giao
+// diện "vi" ở máy tiếng Việt ≡ "tự động"). Không có gì khác → không làm phiền. Cùng phiên bản
+// (vd tải lại extension khi phát triển) → không hỏi lại.
+function prepareUpdateReview(settings, previousVersion) {
+  const to = chrome.runtime.getManifest().version;
+  if (!previousVersion || HN_CONST.cmpVersion(previousVersion, to) >= 0) return null;
+  const diff = HN_CONST.settingsDiff(settings, previousVersion, HN_I18N.resolve);
+  if (!diff.length) return null;
+  return { from: previousVersion, to, count: diff.length, at: Date.now() };
+}
+
+// Người dùng cũ (≤1.2): giữ nguyên tiếng Việt, chuyển khoá cũ sang khoá mới.
+function migrateSettings(s) {
+  const out = { ...s };
+  let changed = false;
+  if (out.uiLang === undefined) { out.uiLang = "vi"; changed = true; }
+  if (out.nativeLang === undefined) { out.nativeLang = "vi"; changed = true; }
+  if (out.viTargetLang !== undefined) {
+    if (out.nativeTargetLang === undefined) out.nativeTargetLang = out.viTargetLang;
+    delete out.viTargetLang; changed = true;
+  }
+  if (out.hideSelVietnamese !== undefined) {
+    if (out.hideSelNative === undefined) out.hideSelNative = out.hideSelVietnamese;
+    delete out.hideSelVietnamese; changed = true;
+  }
+  return changed ? out : null;
+}
 
 // Gửi lệnh tới content script; nếu tab mở TRƯỚC khi cài/cập nhật extension (chưa có
 // content script) thì tự tiêm rồi gửi lại. Trước đây phím tắt / chuột phải im lặng
@@ -45,33 +113,6 @@ async function injectIntoOpenTabs() {
 }
 
 chrome.runtime.onInstalled.addListener((details) => {
-  // removeAll trước khi create: onInstalled cũng chạy khi CẬP NHẬT phiên bản,
-  // tạo lại cùng id sẽ ném lỗi "duplicate id". Dọn sạch rồi tạo mới cho chắc.
-  chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: MENU_ID_TR,
-      title: "Dịch “%s” (Highlight Note)",
-      contexts: ["selection"]
-    });
-    chrome.contextMenus.create({
-      id: MENU_ID,
-      title: "Lưu & tô sáng “%s” (Highlight Note)",
-      contexts: ["selection"]
-    });
-    // Ghim ghi chú lên trang — không cần bôi đen chữ nào (hiện khi chuột phải vùng trống).
-    chrome.contextMenus.create({
-      id: MENU_ID_STICKY,
-      title: "📌 Ghim ghi chú lên trang này (Highlight Note)",
-      contexts: ["page"]
-    });
-    // Chuột phải vào icon extension → mở bảng quản lý cạnh trang.
-    chrome.contextMenus.create({
-      id: MENU_ID_PANEL,
-      title: "Mở Highlight Note ở Side Panel",
-      contexts: ["action"]
-    });
-  });
-
   injectIntoOpenTabs();
 
   // Lần cài đầu tiên → mở trang chào mừng + hướng dẫn ghim icon cho người dùng.
@@ -84,6 +125,15 @@ chrome.runtime.onInstalled.addListener((details) => {
   chrome.storage.local.get(["words", "settings"], (data) => {
     const updates = {};
     if (!data.words) updates.words = [];
+    if (data.settings) {
+      const m = migrateSettings(data.settings);
+      if (m) updates.settings = m;
+      // Vừa CẬP NHẬT phiên bản → hỏi (1 lần, trong popup) có muốn khôi phục cài đặt gốc không.
+      if (details && details.reason === "update") {
+        const review = prepareUpdateReview(m || data.settings, details.previousVersion);
+        if (review) updates.__updateReview = review;
+      }
+    }
     if (!data.settings) {
       updates.settings = {
         defaultThreshold: 20,
@@ -104,13 +154,14 @@ chrome.runtime.onInstalled.addListener((details) => {
         showSelButton: true,
         showSelCopy: true,
         showSelSpeak: true,
-        hideSelVietnamese: false, // true: không hiện thanh Dịch/Lưu khi bôi chữ tiếng Việt
-        targetLang: "vi",   // dịch chữ nước ngoài sang ngôn ngữ nào
-        viTargetLang: "en", // chữ Việt dịch sang ngôn ngữ nào (chữ nước ngoài luôn dịch sang Việt)
+        hideSelNative: false, // true: không hiện thanh Dịch/Lưu khi bôi chữ bằng ngôn ngữ của bạn
+        // uiLang / nativeLang / targetLang / nativeTargetLang: theo trình duyệt (xem defaultLangSettings)
+        ...defaultLangSettings(),
         autoBackup: false // không tự tải file về thư mục Tải về trừ khi người dùng bật
       };
     }
-    if (Object.keys(updates).length > 0) chrome.storage.local.set(updates);
+    if (Object.keys(updates).length > 0) chrome.storage.local.set(updates, () => syncUiLang(true));
+    else syncUiLang(true);
   });
 });
 
@@ -203,6 +254,7 @@ let lastAppliedJson = null; // words do chính đồng bộ vừa ghi → không
 
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
+  if (changes.settings) syncUiLang(false);
   if (changes.words) {
     const oldW = changes.words.oldValue || [];
     const newW = changes.words.newValue || [];
@@ -472,7 +524,7 @@ async function updateBadgeNow() {
       chrome.action.setBadgeText({ text: due > 99 ? "99+" : String(due) });
       chrome.action.setBadgeBackgroundColor({ color: "#6366f1" });
       if (chrome.action.setBadgeTextColor) chrome.action.setBadgeTextColor({ color: "#ffffff" });
-      chrome.action.setTitle({ title: `Highlight Note — ${due} từ cần ôn hôm nay` });
+      chrome.action.setTitle({ title: T("Highlight Note — {0} từ cần ôn hôm nay", due) });
       return;
     }
     const s = await computeSafety();
@@ -481,7 +533,7 @@ async function updateBadgeNow() {
       chrome.action.setBadgeBackgroundColor({ color: "#e53935" });
       if (chrome.action.setBadgeTextColor) chrome.action.setBadgeTextColor({ color: "#ffffff" });
       chrome.action.setTitle({
-        title: "Highlight Note — Dữ liệu chưa được sao lưu, có thể mất khi gỡ tiện ích.\nBấm để đồng bộ Google Drive hoặc tải backup."
+        title: T("Highlight Note — Dữ liệu chưa được sao lưu, có thể mất khi gỡ tiện ích.\nBấm để đồng bộ Google Drive hoặc tải backup.")
       });
     } else {
       chrome.action.setBadgeText({ text: "" });
@@ -547,8 +599,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   // Mở trang Cài đặt / Hướng dẫn từ UI nổi trong content script (content script
   // không gọi trực tiếp được openOptionsPage / chrome.tabs).
+  // msg.section (vd "selection#showSelButton"): mở đúng mục, làm nổi đúng dòng. Đã có tab
+  // Cài đặt thì dùng lại tab đó.
   if (msg && msg.type === "OPEN_OPTIONS") {
-    chrome.runtime.openOptionsPage();
+    if (!msg.section) { chrome.runtime.openOptionsPage(); return; }
+    const base = chrome.runtime.getURL("options.html");
+    const url = base + "#" + msg.section;
+    chrome.tabs.query({}, (tabs) => {
+      const t = (tabs || []).find(x => x.url && x.url.startsWith(base));
+      if (t) { chrome.tabs.update(t.id, { url, active: true }); chrome.windows.update(t.windowId, { focused: true }); }
+      else chrome.tabs.create({ url });
+    });
     return;
   }
   if (msg && msg.type === "OPEN_WELCOME") {

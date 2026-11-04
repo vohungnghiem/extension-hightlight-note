@@ -635,23 +635,18 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   line-height: 1;
   color: #fff;
 }
-.vocab-note-sel-btn .vn-sel-lead {
-  display: flex; align-items: center; gap: 7px;
-  padding: 0 9px;
-  max-width: 240px;
-}
-.vocab-note-sel-btn .vn-sel-brand { width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0; }
-/* Chưa có nghĩa để hiện → bỏ luôn logo (đỡ 33px chiều rộng) và viền thừa của nút đầu. */
-.vocab-note-sel-btn .vn-sel-lead:not(:has(.vn-sel-trans:not(:empty))) { display: none; }
-.vocab-note-sel-btn .vn-sel-lead:not(:has(.vn-sel-trans:not(:empty))) + .vn-sel-act { border-left: 0; }
+/* Nút Dịch chứa luôn nghĩa: chưa có nghĩa → [icon Dịch]; có nghĩa → [may mắn ›] */
 .vocab-note-sel-btn .vn-sel-trans {
   color: #ffd54f; font-weight: 600;
-  max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis;
 }
-.vocab-note-sel-btn .vn-sel-trans:empty { display: none; }
-.vocab-note-sel-btn .vn-sel-trans.vn-sel-loading { color: #888; font-weight: 400; }
-.vocab-note-sel-btn:not(.vn-sel-exists) .vn-sel-lead:has(.vn-sel-trans:not(:empty):not(.vn-sel-loading)) { cursor: pointer; }
-.vocab-note-sel-btn:not(.vn-sel-exists) .vn-sel-lead:has(.vn-sel-trans:not(:empty)):hover .vn-sel-trans { text-decoration: underline; }
+.vocab-note-sel-btn .vn-sel-trans:empty,
+.vocab-note-sel-btn .vn-sel-chev { display: none; }
+.vocab-note-sel-btn .vn-sel-tr:has(.vn-sel-trans:not(:empty)) > svg,
+.vocab-note-sel-btn .vn-sel-tr:has(.vn-sel-trans:not(:empty)) .vn-sel-tr-label { display: none; }
+.vocab-note-sel-btn .vn-sel-tr:has(.vn-sel-trans:not(:empty)) .vn-sel-chev { display: inline; color: #ffd54f; opacity: 0.7; font-size: 15px; margin-left: -1px; }
+.vocab-note-sel-btn .vn-sel-tr:has(.vn-sel-trans:not(:empty)):hover .vn-sel-trans { text-decoration: underline; }
+.vocab-note-sel-btn > .vn-sel-act:first-child { border-left: 0; }
 .vocab-note-sel-btn .vn-sel-act,
 .vocab-note-sel-btn .vn-sel-ico {
   display: flex; align-items: center; gap: 5px;
@@ -676,6 +671,30 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 .vocab-note-sel-btn .vn-sel-saved { color: #86efac; cursor: default; }
 .vocab-note-sel-btn .vn-sel-saved:hover { background: transparent; }
 .vocab-note-sel-btn .vn-sel-copy.vn-sel-copied { color: #69db7c; background: rgba(105,219,124,0.12); }
+
+/* Menu ⋯ của thanh nổi: tắt / chỉnh ngay tại chỗ */
+.vocab-note-sel-menu {
+  position: fixed; z-index: 2147483647;
+  min-width: 230px; padding: 5px;
+  background: #1e1e1e; color: #eee;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+  box-shadow: 0 8px 26px rgba(0,0,0,0.45);
+  font: 600 12.5px/1.3 -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  animation: vn-pop-in 0.12s ease;
+}
+.vocab-note-sel-menu button {
+  display: block; width: 100%; text-align: left;
+  background: transparent; border: 0; border-radius: 6px;
+  color: inherit; font: inherit; padding: 8px 10px; cursor: pointer;
+}
+.vocab-note-sel-menu button:hover, .vocab-note-sel-menu button:focus-visible { background: rgba(255,255,255,0.1); color: #fff; outline: none; }
+.vocab-note-sel-menu .vn-sel-menu-head {
+  display: flex; align-items: center; gap: 7px; padding: 6px 10px 7px;
+  font-size: 11px; font-weight: 700; color: #999; letter-spacing: 0.2px;
+}
+.vocab-note-sel-menu .vn-sel-menu-head img { width: 14px; height: 14px; border-radius: 3px; }
+.vocab-note-sel-menu .vn-sel-menu-sep { height: 1px; margin: 4px 6px; background: rgba(255,255,255,0.12); }
+@media (prefers-reduced-motion: reduce) { .vocab-note-sel-menu { animation: none; } }
 
 /* ============ THẺ DỊCH (chỉ xem, không lưu) ============ */
 .vocab-note-mini-card.vn-tr-card { border-top-color: #4f46e5; width: 384px; max-width: calc(100vw - 20px); }
