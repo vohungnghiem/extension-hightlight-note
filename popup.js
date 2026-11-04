@@ -59,6 +59,8 @@ const ICON = {
   globe: svg('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
   block: svg('<circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>'),
   pin: svg('<path d="M12 17v5"/><path d="M9 10.76V6h6v4.76a2 2 0 0 0 1.11 1.79l1.78.9A2 2 0 0 1 19 15.24V17H5v-1.76a2 2 0 0 1 1.11-1.79l1.78-.9A2 2 0 0 0 9 10.76z"/><path d="M8 6h8"/>'),
+  link: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
+  repeat: svg('<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>'),
   highlight: svg('<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>')
 };
 const TYPE_ICON = {
@@ -167,9 +169,11 @@ function looksTranslatable(text) {
 const _trCache = new Map();
 async function translateText(text) {
   const key = text.trim();
-  if (_trCache.has(key)) return _trCache.get(key);
+  const tl = self.HN_CONST.mainTargetLang(settings);
+  const ck = tl + "|" + key;
+  if (_trCache.has(ck)) return _trCache.get(ck);
   try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dt=t&q=${encodeURIComponent(key)}`;
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(key)}`;
     const res = await fetch(url);
     if (!res.ok) return null;
     const data = await res.json();
@@ -177,7 +181,7 @@ async function translateText(text) {
     const out = data[0].map(seg => (seg && seg[0]) || "").join("").trim();
     const lang = typeof data[2] === "string" ? data[2].toLowerCase() : "";
     const r = { text: out && out.toLowerCase() !== key.toLowerCase() ? out : "", lang };
-    _trCache.set(key, r);
+    _trCache.set(ck, r);
     return r;
   } catch (e) { return null; }
 }
@@ -233,9 +237,22 @@ function toast(msg, kind = "", action = null) {
     btn.hidden = true;
     btn.onclick = null;
   }
+  const dur = action ? 6000 : 2600;
+  t.style.setProperty("--dur", dur + "ms");
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, action ? 6000 : 2600);
+  toastTimer = setTimeout(() => { t.hidden = true; }, dur);
+}
+
+// Danh sách trượt vào so le — chỉ 1 lần mỗi lần mở popup (không lặp khi dữ liệu đổi).
+let listEntered = false;
+function playListEnter() {
+  if (listEntered) return;
+  listEntered = true;
+  const list = $("list");
+  list.querySelectorAll(".item").forEach((el, i) => el.style.setProperty("--i", Math.min(i, 12)));
+  list.classList.add("enter");
+  setTimeout(() => list.classList.remove("enter"), 800);
 }
 
 // ---------- Load ----------
@@ -255,6 +272,7 @@ function load() {
     $("enabledToggle").checked = settings.enabled !== false;
     renderTypePicker();
     render();
+    playListEnter();
     refreshSync();
     renderSiteBar();
     refreshPageItems();
@@ -411,14 +429,14 @@ function itemHtml(w) {
   const langTag = (isVocab && lang !== "vi") ? `<span class="lang-tag lang-${escapeHtml(lang)}">${escapeHtml(lang.toUpperCase())}</span>` : "";
 
   const meta = [];
-  if (w.learned) meta.push(`<span class="status-tag">${isVocab ? "🎓" : "✓"} ${doneLabel(w)}</span>`);
+  if (w.learned) meta.push(`<span class="status-tag"><span class="ico-inl">${isVocab ? ICON.learn : ICON.check}</span> ${doneLabel(w)}</span>`);
   else if (w.disabled) meta.push(`<span class="status-tag">Đang tạm ẩn</span>`);
   if (isVocab && learningOn && !w.learned && !w.disabled) {
     meta.push(`<span class="mini-progress" title="Đã gặp ${w.hoverCount || 0}/${threshold} lần — đủ sẽ tự đánh dấu đã thuộc"><i style="width:${pct}%"></i></span><span class="seen" title="Số lần gặp / ngưỡng">${w.hoverCount || 0}/${threshold}</span>`);
     if (w.srsDue) meta.push(`<span class="srs-due" title="Lịch ôn giãn cách">${srsDueLabel(w.srsDue)}</span>`);
   }
   if (!isVocab || !learningOn) meta.push(`<span>${relDate(w.createdAt)}</span>`);
-  if (w.url) meta.push(`<a class="src-link" data-act="open" title="Mở trang nguồn: ${escapeHtml(w.pageTitle || w.url)}">🔗 ${escapeHtml(hostOf(w.url))}</a>`);
+  if (w.url) meta.push(`<a class="src-link" data-act="open" title="Mở trang nguồn: ${escapeHtml(w.pageTitle || w.url)}"><span class="ico-inl">${ICON.link}</span> ${escapeHtml(hostOf(w.url))}</a>`);
 
   const actions = w.learned
     ? actBtn("unlearn", ICON.unlearn, `Bỏ đánh dấu ${doneLabel(w)} (tô sáng lại)`) + actBtn("edit", ICON.edit, "Sửa") + actBtn("del", ICON.del, "Xoá")
@@ -573,14 +591,28 @@ function deleteWord(w) {
 function startInlineEdit(itemEl, w) {
   if (!itemEl) return;
   const info = itemEl.querySelector(".info");
+  info.addEventListener("click", (e) => {
+    const chip = e.target.closest(".ef-types .tp-chip");
+    if (!chip) return;
+    e.stopPropagation();
+    const box = chip.parentElement;
+    box.dataset.value = chip.dataset.etype;
+    box.querySelectorAll(".tp-chip").forEach(c => {
+      const on = c === chip;
+      c.classList.toggle("active", on);
+      c.setAttribute("aria-pressed", on);
+    });
+  });
   const isSticky = !!w.sticky;
+  // Chip có icon SVG (cùng kiểu form "Thêm mục") thay cho <select> — ô chọn gốc của trình
+  // duyệt chỉ hiện được emoji nên lệch bộ icon của cả tiện ích.
   const typeOpts = Object.keys(VN_TYPES).map(t =>
-    `<option value="${t}"${typeOf(w) === t ? " selected" : ""}>${VN_TYPES[t].icon} ${VN_TYPES[t].label}</option>`).join("");
+    `<button type="button" class="tp-chip${typeOf(w) === t ? " active" : ""}" data-etype="${t}" data-vn-type="${t}" aria-pressed="${typeOf(w) === t}">${TYPE_ICON[t]}${VN_TYPES[t].label}</button>`).join("");
   info.innerHTML = `
     <div class="edit-form">
       <label>${isSticky ? "Nội dung ghi chú" : "Từ / cụm từ"}</label>
       <textarea class="ef-term" rows="1">${escapeHtml(w.term)}</textarea>
-      ${isSticky ? "" : `<label>Loại</label><select class="ef-type">${typeOpts}</select>
+      ${isSticky ? "" : `<label>Loại</label><div class="type-picker ef-types" data-value="${typeOf(w)}">${typeOpts}</div>
       <label>Nghĩa / mô tả</label>
       <textarea class="ef-meaning" rows="1" placeholder="Nghĩa">${escapeHtml(w.meaning || "")}</textarea>`}
       <label>Ghi chú</label>
@@ -617,8 +649,8 @@ function startInlineEdit(itemEl, w) {
       return;
     }
     if (newTerm !== w.term) { w.term = newTerm; if (!isSticky) w.lang = detectLang(newTerm); }
-    const typeSel = info.querySelector(".ef-type");
-    if (typeSel) w.type = typeSel.value;
+    const typeBox = info.querySelector(".ef-types");
+    if (typeBox) w.type = typeBox.dataset.value;
     if (meaningInput) w.meaning = meaningInput.value.trim();
     w.note = noteInput.value.trim();
     const tags = parseTags(tagsInput.value);
@@ -912,7 +944,7 @@ function renderReviewBar() {
   const n = settings.srsReminder === false ? 0 : st.due;
   if (n === 0 || reviewBarHiddenDay === todayKey()) { bar.hidden = true; return; }
   bar.hidden = false;
-  bar.innerHTML = `<button class="rb-go" id="reviewNowBtn" title="Bắt đầu ôn">🔁 <b>${n}</b> từ đến hạn ôn · <u>Ôn ngay</u></button>
+  bar.innerHTML = `<button class="rb-go" id="reviewNowBtn" title="Bắt đầu ôn"><span class="ico-inl">${ICON.repeat}</span> <b>${n}</b> từ đến hạn ôn · <u>Ôn ngay</u></button>
     <button class="rb-x" id="reviewHideBtn" title="Ẩn tới hết hôm nay" aria-label="Ẩn tới hết hôm nay">×</button>`;
   $("reviewNowBtn").onclick = startReview;
   $("reviewHideBtn").onclick = () => {
@@ -962,7 +994,7 @@ function showReviewCard() {
     $("quizProgress").textContent = `${total}/${total}`;
     const remembered = reviewStats.good + reviewStats.easy;
     card.innerHTML = `
-      <div class="q-done">🎉</div>
+      <div class="q-done">${ICON.check}</div>
       <div class="q-meaning">Xong buổi ôn!</div>
       <div class="q-summary">Nhớ <b>${remembered}</b> · Cần ôn lại <b>${reviewStats.again}</b></div>`;
     actions.innerHTML = `<button class="btn-primary" id="quizClose">Đóng</button>`;

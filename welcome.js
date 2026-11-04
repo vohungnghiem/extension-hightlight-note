@@ -35,7 +35,7 @@ if (protectBtn) {
       } else {
         protectMsg.style.color = "#15803d";
         protectMsg.textContent = "✓ Đã kết nối. Trên máy khác, bấm Đồng bộ (biểu tượng ☁ trong popup) để lấy dữ liệu về.";
-        protectBtn.textContent = "✓ Đã kết nối Google Drive";
+        document.getElementById("protectLbl").textContent = "Đã kết nối Google Drive";
       }
     });
   });

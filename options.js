@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const { VN_TYPE_COLORS: tcDef, VN_TYPES, detectLang } = self.HN_CONST;
+const { VN_TYPE_COLORS: tcDef, VN_TYPES, detectLang, TARGET_LANGS, viTargetLang, mainTargetLang } = self.HN_CONST;
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
@@ -85,9 +85,11 @@ function uiToast(text, kind) {
   const t = $("toast");
   t.textContent = text;
   t.className = "toast" + (kind ? " " + kind : "");
+  const dur = kind === "err" ? 5000 : 2600;
+  t.style.setProperty("--dur", dur + "ms");
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, kind === "err" ? 5000 : 2600);
+  toastTimer = setTimeout(() => { t.hidden = true; }, dur);
 }
 // Phản hồi nhẹ khi tự lưu cài đặt (không chặn thao tác).
 let savedTimer = null;
@@ -120,7 +122,10 @@ chrome.storage.local.get("settings", ({ settings }) => {
   $("showSelButton").checked = s.showSelButton !== false;
   $("showSelCopy").checked = s.showSelCopy !== false;
   $("showSelSpeak").checked = s.showSelSpeak !== false;
-  $("autoBackup").checked = s.autoBackup !== false;
+  $("hideSelVietnamese").checked = s.hideSelVietnamese === true;
+  $("autoBackup").checked = s.autoBackup === true;
+  $("targetLang").value = mainTargetLang(s);
+  $("viTargetLang").value = viTargetLang(s);
   blacklist = (s.blacklistedHosts || []).slice();
   renderSites();
   updatePreview();
@@ -161,7 +166,7 @@ function updatePreview() {
 // Tuỳ chọn con chỉ có nghĩa khi tuỳ chọn cha đang bật → làm mờ cho dễ hiểu.
 function updateDependents() {
   const sel = $("showSelButton").checked;
-  ["previewTranslate", "showSelSpeak", "showSelCopy"].forEach(id => {
+  ["previewTranslate", "showSelSpeak", "showSelCopy", "hideSelVietnamese"].forEach(id => {
     $(id).disabled = !sel;
     $(id).closest(".row").classList.toggle("off", !sel);
   });
@@ -200,6 +205,9 @@ function saveAll() {
     showSelButton: $("showSelButton").checked,
     showSelCopy: $("showSelCopy").checked,
     showSelSpeak: $("showSelSpeak").checked,
+    hideSelVietnamese: $("hideSelVietnamese").checked,
+    targetLang: $("targetLang").value,
+    viTargetLang: $("viTargetLang").value,
     blacklistedHosts: blacklist.slice()
   }, savedFeedback);
 }
@@ -209,8 +217,13 @@ function saveSoon() {
   saveTimer = setTimeout(saveAll, 500);
 }
 
-["learningMode", "srsReminder", "caseSensitive", "showToasts", "previewTranslate", "showSelButton", "showSelCopy", "showSelSpeak"]
+["learningMode", "srsReminder", "caseSensitive", "showToasts", "previewTranslate", "showSelButton", "showSelCopy", "showSelSpeak", "hideSelVietnamese"]
   .forEach(id => $(id).addEventListener("change", () => { updateDependents(); saveAll(); }));
+const langOptions = (skipVi) => TARGET_LANGS.filter(t => !(skipVi && t.code === "vi"))
+  .map(t => `<option value="${t.code}">${escapeHtml(t.label)}</option>`).join("");
+$("targetLang").innerHTML = langOptions(false);
+$("viTargetLang").innerHTML = langOptions(true);
+["targetLang", "viTargetLang"].forEach(id => $(id).addEventListener("change", saveAll));
 ["color", "colorImportant", "colorTodo", "colorQuestion", "colorReference"].forEach(id => {
   $(id).addEventListener("input", () => { updatePreview(); saveSoon(); });   // kéo bảng màu
   $(id).addEventListener("change", () => { updatePreview(); saveAll(); });
@@ -412,10 +425,10 @@ async function confirmSyncChanges(res) {
 }
 
 function busy(btn, text) {
-  const old = btn.textContent;
+  const old = btn.innerHTML; // giữ cả icon SVG trong nút
   btn.disabled = true;
   btn.textContent = text;
-  return () => { btn.disabled = false; btn.textContent = old; };
+  return () => { btn.disabled = false; btn.innerHTML = old; };
 }
 function runSyncFlow(type, btn, busyText, extra = {}) {
   const done = busy(btn, busyText);

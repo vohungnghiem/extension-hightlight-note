@@ -627,6 +627,9 @@ html[data-theme="dark"] .chg.del { background: #2c1620; color: #fca5a5; }
   border: 1px dashed var(--brand); color: var(--brand-ink); font-size: 12.5px; font-weight: 700;
 }
 .quiz-card .q-done { font-size: 34px; }
+.quiz-card .q-done svg { width: 44px; height: 44px; color: var(--learned); margin: 0 auto; }
+.ico-inl { display: inline-flex; vertical-align: -2px; }
+.ico-inl svg { width: 13px; height: 13px; }
 .quiz-card .q-summary { font-size: 14px; color: var(--ink-soft); }
 #quizActions { display: flex; gap: 8px; margin-top: 10px; }
 #quizActions button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 6px; }
@@ -637,20 +640,43 @@ html[data-theme="dark"] .chg.del { background: #2c1620; color: #fca5a5; }
 /* ===== Toast ===== */
 .popup-toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 66px;
-  display: flex; align-items: center; gap: 10px;
-  background: #2a2d3a; color: #fff; padding: 9px 10px 9px 14px; border-radius: 10px;
-  font-size: 12.5px; z-index: 200; box-shadow: var(--shadow-2);
+  display: flex; align-items: center; gap: 10px; overflow: hidden;
+  background: #1e1e1e; color: #f1f1f4; padding: 9px 8px 11px 12px; border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12.5px; font-weight: 500; z-index: 200; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   max-width: calc(100% - 24px); width: max-content;
-  animation: toast-in 0.18s ease;
+  --pt: #a5b4fc;
+  animation: toast-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px) scale(0.97); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+/* Chấm màu theo loại + thanh thời gian ở đáy — cùng kiểu toast trên trang */
+.popup-toast::before {
+  content: ""; flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; margin: 0 4px 0 3px;
+  background: var(--pt); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pt) 22%, transparent);
+}
+.popup-toast::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
+  background: var(--pt); opacity: 0.6; transform-origin: left center;
+  animation: pt-bar var(--dur, 2600ms) linear forwards;
+}
+@keyframes pt-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 .popup-toast .toast-text { min-width: 0; }
-.popup-toast.success { background: #0f8a63; }
-.popup-toast.error { background: #d23c3c; }
-.popup-toast.warn { background: #b4690e; }
+.popup-toast.success { --pt: #34d399; }
+.popup-toast.error { --pt: #f87171; }
+.popup-toast.warn { --pt: #fbbf24; }
 .popup-toast .toast-act {
-  flex-shrink: 0; border: none; border-radius: 7px; padding: 5px 10px; cursor: pointer;
-  background: rgba(255, 255, 255, 0.95); color: #1e2233; font-weight: 800; font-size: 12px;
+  flex-shrink: 0; border: none; border-radius: 8px; padding: 5px 10px; cursor: pointer;
+  background: transparent; color: #a5b4fc; font-weight: 700; font-size: 12.5px;
+}
+.popup-toast .toast-act:hover { background: rgba(165, 180, 252, 0.16); color: #c7d2fe; }
+
+/* ============ CHUYỂN ĐỘNG ============ */
+button:active:not(:disabled), .chip:active { transform: scale(0.97); }
+/* Danh sách trượt vào lần mở popup (so le nhẹ) — popup.js bật class .enter đúng 1 lần */
+.list.enter .item { animation: item-in 0.26s ease both; animation-delay: calc(var(--i, 0) * 28ms); }
+@keyframes item-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
 /* ============================================================

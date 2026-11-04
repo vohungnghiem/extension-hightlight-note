@@ -31,6 +31,13 @@
     return /[ăâđêôơưĂÂĐÊÔƠƯẠ-ỹ]/.test(String(s || ""));
   }
 
+  // CHẮC CHẮN là chữ Việt: có ă đ ơ ư hoặc chữ có dấu chồng (U+1EA0–1EF9). KHÔNG tính â ê ô
+  // vì tiếng Pháp / Bồ Đào Nha / Rumani… cũng có (être, château, hôtel) — các chữ đó chỉ
+  // mang tính "có thể", để Google Dịch quyết định.
+  function isSureVietnamese(s) {
+    return /[ăđơưĂĐƠƯẠ-ỹ]/.test(String(s || ""));
+  }
+
   // Đoán ngôn ngữ CỤC BỘ (không gọi mạng). Google Translate sẽ tinh chỉnh lại
   // (es/fr/de…) khi dịch. Trước đây mọi thứ không phải CJK đều bị gán "en" →
   // chữ Việt bị sinh biến thể kiểu Anh và phát âm bằng giọng Anh.
@@ -38,7 +45,13 @@
     const t = String(s || "");
     if (/[぀-ヿ]/.test(t)) return "ja";        // có kana → chắc chắn tiếng Nhật
     if (/[가-힯]/.test(t)) return "ko";
-    if (/[一-鿿]/.test(t)) return "ja";        // chỉ có Hán tự: giữ hành vi cũ (JA)
+    if (/[一-鿿]/.test(t)) {
+      // Chỉ có Hán tự: không phân biệt được Trung/Nhật chỉ từ chữ. Trang khai báo
+      // lang="zh…" thì là tiếng Trung; không thì giữ hành vi cũ (JA). Google Dịch
+      // sẽ nhận đúng lại khi dịch (zh-CN/zh-TW) — đây chỉ là đoán tạm lúc chưa có mạng.
+      const pageLang = (typeof document !== "undefined" && document.documentElement && document.documentElement.lang) || "";
+      return /^zh/i.test(pageLang) ? "zh" : "ja";
+    }
     if (isVietnamese(t)) return "vi";
     return "en";
   }
@@ -52,6 +65,50 @@
   function speechLang(lang) {
     const l = String(lang || "en").toLowerCase();
     return SPEECH_LANG[l] || l;
+  }
+
+  // Từ điển theo ngôn ngữ nguồn (nhận cả mã Google như "zh-CN"). Dùng chung cho
+  // tooltip trên trang và thẻ Dịch để hai nơi không lệch nhau.
+  function dictLink(term, lang) {
+    const q = encodeURIComponent(term);
+    const l = String(lang || "").toLowerCase();
+    if (l === "ja") return { url: `https://jisho.org/search/${q}`, title: "Jisho" };
+    if (l === "en") return { url: `https://dictionary.cambridge.org/dictionary/english/${q}`, title: "Cambridge" };
+    if (l === "zh" || l.startsWith("zh-")) return { url: `https://hanzii.net/search/word/${q}?hl=vi`, title: "Hanzii" };
+    if (l === "ko") return { url: `https://korean.dict.naver.com/kovidict/#/search?query=${q}`, title: "Naver" };
+    return { url: `https://en.wiktionary.org/wiki/${q}`, title: "Wiktionary" };
+  }
+
+  // Ngôn ngữ đích có thể chọn. Mã theo Google Dịch. Hai lựa chọn độc lập, mỗi cái nhớ riêng:
+  //   settings.targetLang   — dịch CHỮ NƯỚC NGOÀI sang đâu (mặc định "vi")
+  //   settings.viTargetLang — dịch CHỮ VIỆT sang đâu (mặc định "en")
+  // Chọn ngay trên thẻ Dịch (người dùng không phải vào Cài đặt).
+  // label: tên đầy đủ (Cài đặt); short: tên gọn cho ô chọn nhỏ trên thẻ Dịch.
+  const TARGET_LANGS = [
+    { code: "vi",    label: "Tiếng Việt",             short: "Việt" },
+    { code: "en",    label: "Tiếng Anh",              short: "Anh" },
+    { code: "ja",    label: "Tiếng Nhật",             short: "Nhật" },
+    { code: "ko",    label: "Tiếng Hàn",              short: "Hàn" },
+    { code: "zh-CN", label: "Tiếng Trung (giản thể)", short: "Trung (giản)" },
+    { code: "zh-TW", label: "Tiếng Trung (phồn thể)", short: "Trung (phồn)" },
+    { code: "fr",    label: "Tiếng Pháp",             short: "Pháp" },
+    { code: "de",    label: "Tiếng Đức",              short: "Đức" },
+    { code: "es",    label: "Tiếng Tây Ban Nha",      short: "Tây Ban Nha" },
+    { code: "ru",    label: "Tiếng Nga",              short: "Nga" },
+    { code: "th",    label: "Tiếng Thái",             short: "Thái" }
+  ];
+  function viTargetLang(settings) {
+    const c = settings && settings.viTargetLang;
+    return (c !== "vi" && TARGET_LANGS.some(t => t.code === c)) ? c : "en";
+  }
+  function mainTargetLang(settings) {
+    const c = settings && settings.targetLang;
+    return TARGET_LANGS.some(t => t.code === c) ? c : "vi";
+  }
+  // Cùng một ngôn ngữ? ("zh-CN" ≈ "zh-TW" ≈ "zh")
+  function sameLang(a, b) {
+    const x = String(a || "").toLowerCase().split("-")[0], y = String(b || "").toLowerCase().split("-")[0];
+    return !!x && x === y;
   }
 
   function speak(text, lang) {
@@ -101,7 +158,7 @@
   }
 
   root.HN_CONST = {
-    VN_TYPES, VN_TYPE_COLORS, isVietnamese, detectLang, speechLang, speak, hostBlocked,
+    VN_TYPES, VN_TYPE_COLORS, isVietnamese, isSureVietnamese, detectLang, speechLang, dictLink, TARGET_LANGS, viTargetLang, mainTargetLang, sameLang, speak, hostBlocked,
     learningEnabled, isReviewable, reviewState
   };
 })(typeof self !== "undefined" ? self : this);

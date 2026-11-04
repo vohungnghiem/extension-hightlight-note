@@ -103,7 +103,11 @@ chrome.runtime.onInstalled.addListener((details) => {
         previewTranslate: true,
         showSelButton: true,
         showSelCopy: true,
-        showSelSpeak: true
+        showSelSpeak: true,
+        hideSelVietnamese: false, // true: không hiện thanh Dịch/Lưu khi bôi chữ tiếng Việt
+        targetLang: "vi",   // dịch chữ nước ngoài sang ngôn ngữ nào
+        viTargetLang: "en", // chữ Việt dịch sang ngôn ngữ nào (chữ nước ngoài luôn dịch sang Việt)
+        autoBackup: false // không tự tải file về thư mục Tải về trừ khi người dùng bật
       };
     }
     if (Object.keys(updates).length > 0) chrome.storage.local.set(updates);
@@ -415,6 +419,18 @@ function isEstablished(words, now = Date.now()) {
   const oldest = Math.min(...words.map(w => Date.parse(w.createdAt || "") || 0));
   return now - oldest >= ESTABLISHED_AGE_MS;
 }
+// Dấu "!" đỏ trên icon gây chú ý hơn dải nhắc trong popup (ẩn được 7 ngày), nên chỉ bật khi
+// dữ liệu đã đáng giá hơn: từ 50 mục, hoặc mục cũ nhất đã 14 ngày. Dải nhắc trong popup vẫn
+// hiện sớm hơn (từ 20 mục / 3 ngày).
+const BADGE_COUNT = 50;
+const BADGE_AGE_MS = 14 * 86400000;
+async function isBadgeWorthy() {
+  const { words } = await chrome.storage.local.get("words");
+  if (!words || !words.length) return false;
+  if (words.length >= BADGE_COUNT) return true;
+  const oldest = Math.min(...words.map(w => Date.parse(w.createdAt || "") || Date.now()));
+  return Date.now() - oldest >= BADGE_AGE_MS;
+}
 async function computeSafety() {
   try {
     const d = await chrome.storage.local.get(["words", "settings", "__lastSync", "__driveAccount", "__lastAutoBackupAt"]);
@@ -460,7 +476,7 @@ async function updateBadgeNow() {
       return;
     }
     const s = await computeSafety();
-    if (s.level === "danger") {
+    if (s.level === "danger" && await isBadgeWorthy()) {
       chrome.action.setBadgeText({ text: "!" });
       chrome.action.setBadgeBackgroundColor({ color: "#e53935" });
       if (chrome.action.setBadgeTextColor) chrome.action.setBadgeTextColor({ color: "#ffffff" });
@@ -475,7 +491,7 @@ async function updateBadgeNow() {
 }
 
 // ======================= TỰ ĐỘNG BACKUP RA MÁY =======================
-// Định kỳ tải 1 file backup .json vào thư mục Tải về (ghi đè 1 file duy nhất).
+// TẮT mặc định; khi người dùng bật thì định kỳ tải 1 file backup .json vào thư mục Tải về (ghi đè 1 file duy nhất).
 // File nằm trên ổ đĩa → SỐNG SÓT cả khi gỡ extension.
 
 const AUTO_BACKUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // mỗi 7 ngày
@@ -500,7 +516,7 @@ async function doAutoBackup(words, settings) {
 async function maybeAutoBackup(force) {
   const d = await chrome.storage.local.get(["words", "settings", "__lastAutoBackupAt"]);
   const settings = d.settings || {};
-  if (settings.autoBackup === false) return;
+  if (settings.autoBackup !== true) return; // mặc định TẮT: chỉ tải file về máy khi người dùng tự bật
   if (!d.words || d.words.length === 0) return;
   if (!force && !isEstablished(d.words)) return; // người mới: chưa tự tải file về máy
   const lastMs = Date.parse(d.__lastAutoBackupAt || "") || 0;

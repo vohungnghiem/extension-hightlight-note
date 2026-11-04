@@ -193,9 +193,14 @@
     .tag { flex-shrink: 0; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--brand-weak); color: var(--brand-ink); }
     .tag.del { background: #fef2f2; color: #b91c1c; }
     html[data-theme="dark"] .tag.del { background: #2c1620; color: #fca5a5; }
-    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 120; background: #2a2d3a; color: #fff; padding: 11px 18px; border-radius: 10px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.25); max-width: calc(100% - 40px); }
-    .toast.ok { background: #0f8a63; }
-    .toast.err { background: #d23c3c; }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 120; display: flex; align-items: center; gap: 10px; overflow: hidden; background: #1e1e1e; color: #f1f1f4; border: 1px solid rgba(255,255,255,0.1); padding: 11px 18px 13px 14px; border-radius: 12px; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.35); max-width: calc(100% - 40px); --pt: #a5b4fc; animation: ui-toast-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .toast::before { content: ""; flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--pt); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pt) 22%, transparent); }
+    .toast::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; background: var(--pt); opacity: 0.6; transform-origin: left center; animation: ui-toast-bar var(--dur, 2600ms) linear forwards; }
+    .toast.ok { --pt: #34d399; }
+    .toast.err { --pt: #f87171; }
+    @keyframes ui-toast-in { from { opacity: 0; transform: translate(-50%, 8px) scale(0.97); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+    @keyframes ui-toast-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
@@ -251,11 +256,11 @@
 
         <h3>Màu theo loại</h3>
         <div class="rows">
-          <div class="row"><div class="rt"><b>📚 Từ vựng</b></div><input type="color" id="color" value="#ffeb3b" aria-label="Màu Từ vựng" /></div>
-          <div class="row"><div class="rt"><b>⭐ Quan trọng</b></div><input type="color" id="colorImportant" value="#ff5a5f" aria-label="Màu Quan trọng" /></div>
-          <div class="row"><div class="rt"><b>✅ Cần làm</b></div><input type="color" id="colorTodo" value="#28c76f" aria-label="Màu Cần làm" /></div>
-          <div class="row"><div class="rt"><b>❓ Câu hỏi</b></div><input type="color" id="colorQuestion" value="#9b6dff" aria-label="Màu Câu hỏi" /></div>
-          <div class="row"><div class="rt"><b>📎 Tư liệu</b></div><input type="color" id="colorReference" value="#00bcd4" aria-label="Màu Tư liệu" /></div>
+          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Từ vựng</b></div><input type="color" id="color" value="#ffeb3b" aria-label="Màu Từ vựng" /></div>
+          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Quan trọng</b></div><input type="color" id="colorImportant" value="#ff5a5f" aria-label="Màu Quan trọng" /></div>
+          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Cần làm</b></div><input type="color" id="colorTodo" value="#28c76f" aria-label="Màu Cần làm" /></div>
+          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Câu hỏi</b></div><input type="color" id="colorQuestion" value="#9b6dff" aria-label="Màu Câu hỏi" /></div>
+          <div class="row"><div class="rt"><b><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>Tư liệu</b></div><input type="color" id="colorReference" value="#00bcd4" aria-label="Màu Tư liệu" /></div>
           <div class="row"><div class="rt"><small>Đổi màu xong xem ngay ở khung phía trên.</small></div><button class="link" id="resetColorsBtn">Khôi phục màu mặc định</button></div>
         </div>
 
@@ -282,12 +287,27 @@
             <label class="tgl"><input type="checkbox" id="previewTranslate" /><span></span></label>
           </div>
           <div class="row sub">
+            <div class="rt"><b>Không hiện khi bôi chữ tiếng Việt</b><small>Bôi chữ Việt thì không bật thanh này (vẫn lưu được bằng Alt+Shift+H hoặc chuột phải). Chữ Việt không dấu thì không nhận ra được.</small></div>
+            <label class="tgl"><input type="checkbox" id="hideSelVietnamese" /><span></span></label>
+          </div>
+          <div class="row sub">
             <div class="rt"><b>Nút phát âm</b></div>
             <label class="tgl"><input type="checkbox" id="showSelSpeak" /><span></span></label>
           </div>
           <div class="row sub">
             <div class="rt"><b>Nút sao chép</b></div>
             <label class="tgl"><input type="checkbox" id="showSelCopy" /><span></span></label>
+          </div>
+        </div>
+        <h3>Ngôn ngữ dịch</h3>
+        <div class="rows">
+          <div class="row">
+            <div class="rt"><b>Dịch chữ nước ngoài sang</b><small>Ngôn ngữ của bản dịch và nghĩa tự điền khi lưu. Đổi nhanh ngay trên thẻ Dịch: bấm vào tên ngôn ngữ ở đầu thẻ.</small></div>
+            <select class="text-in" id="targetLang" style="flex:0 0 auto;width:auto"></select>
+          </div>
+          <div class="row">
+            <div class="rt"><b>Chữ tiếng Việt dịch sang</b><small>Khi bạn bôi đen chữ <i>tiếng Việt</i> rồi bấm Dịch (cũng đổi nhanh được trên thẻ Dịch).</small></div>
+            <select class="text-in" id="viTargetLang" style="flex:0 0 auto;width:auto"></select>
           </div>
         </div>
         <h3>Thông báo</h3>
@@ -347,7 +367,7 @@
           <div class="sync-box">
             <div id="syncNotConfigured" class="warn-box" hidden>Bản cài này chưa hỗ trợ Google Drive. Hãy dùng <b>Sao lưu ra file</b> bên dưới để chuyển dữ liệu giữa các máy.</div>
             <div id="syncDisconnected" hidden>
-              <button id="connectDriveBtn" class="btn primary big">☁ Kết nối Google Drive</button>
+              <button id="connectDriveBtn" class="btn primary big"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>Kết nối Google Drive</button>
               <p class="empty-note" style="text-align:center;margin:8px 0 0">Chỉ truy cập đúng 1 file do Highlight Note tạo, không đọc file nào khác của bạn.</p>
             </div>
             <div id="syncConnected" hidden>
@@ -355,7 +375,7 @@
                 <span class="dot"></span>
                 <div><b id="syncAccount">Đã kết nối Google Drive</b><small id="syncLast"></small><small id="syncResult"></small></div>
               </div>
-              <button id="syncNowBtn" class="btn primary big">🔄 Đồng bộ ngay</button>
+              <button id="syncNowBtn" class="btn primary big"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Đồng bộ ngay</button>
               <div class="sync-links">
                 <button class="link" id="openDriveBtn">Xem file trên Drive</button>
                 <button class="link" id="restoreBtn" hidden></button>
@@ -377,7 +397,7 @@
             <input type="file" id="importFile" accept="application/json,.json" hidden />
           </div>
           <div class="row">
-            <div class="rt"><b>Tự sao lưu mỗi tuần</b><small>Tự tải 1 file vào thư mục Tải về (ghi đè file cũ) — vẫn còn kể cả khi gỡ extension. Bắt đầu khi bạn đã có từ 20 mục hoặc dùng được 3 ngày. <button class="link" id="backupNowBtn">Sao lưu ngay</button></small></div>
+            <div class="rt"><b>Tự sao lưu mỗi tuần</b><small>Đang tắt mặc định. Bật lên thì mỗi tuần tự tải 1 file vào thư mục Tải về (ghi đè file cũ) — vẫn còn kể cả khi gỡ extension. Bắt đầu khi bạn đã có từ 20 mục hoặc dùng được 3 ngày. <button class="link" id="backupNowBtn">Sao lưu ngay</button></small></div>
             <label class="tgl"><input type="checkbox" id="autoBackup" /><span></span></label>
           </div>
         </div>

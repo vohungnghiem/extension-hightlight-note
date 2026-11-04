@@ -108,7 +108,7 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 /* Outer container: padding nhỏ chỉ đủ qua gap, không quá to để tooltip không "dính" */
 .vocab-note-tooltip {
   position: fixed;
-  z-index: 2147483647;
+  z-index: 2147483645; /* dưới ghi chú dán (…646) và thanh nổi / thẻ / toast (…647) */
   padding: 10px;
   margin: -10px;
   pointer-events: auto;
@@ -353,6 +353,10 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 }
 .vocab-note-tooltip.pinned .vn-hint { display: none; }
 
+/* Tooltip vào mượt (chỉ lần hiện đầu; xem .vn-enter trong content.js) */
+.vocab-note-tooltip.vn-enter .vn-card { animation: vn-tip-in 0.11s ease-out; }
+@keyframes vn-tip-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
 /* Toast stack: container cố định, toast xếp chồng không đè nhau */
 .vocab-note-toast-stack {
   position: fixed;
@@ -364,11 +368,9 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   gap: 10px;
   align-items: flex-end;
   pointer-events: none;
-  max-height: 80vh;
-  overflow: hidden;
 }
 .vocab-note-toast-stack .vocab-note-toast {
-  position: static;
+  position: relative;
   bottom: auto;
   right: auto;
   pointer-events: auto;
@@ -382,44 +384,61 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   z-index: 2147483647;
   display: flex;
   align-items: center;
-  gap: 9px;
-  background: #2e7d32;
-  color: #fff;
-  padding: 12px 16px;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  gap: 10px;
+  overflow: hidden;
+  background: #1e1e1e;
+  color: #f1f1f4;
+  padding: 10px 12px 12px 11px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.42), 0 2px 6px rgba(0,0,0,0.25);
   font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  font-size: 14px;
-  max-width: 360px;
-  animation: vn-slide-in 0.25s ease;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  max-width: 380px;
+  animation: vn-toast-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.vocab-note-toast .vn-toast-brand {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  flex-shrink: 0;
-  background: rgba(255,255,255,0.9);
+.vocab-note-toast.vn-out { animation: vn-toast-out 0.18s ease forwards; }
+/* Biểu tượng tròn theo loại */
+.vocab-note-toast .vn-toast-ico {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
 }
-.vocab-note-toast .vn-toast-text { flex: 1; min-width: 0; }
-.vocab-note-toast.vn-warn { background: #f57c00; }
-.vocab-note-toast button {
-  background: #fff;
-  color: #2e7d32;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 10px;
-  margin-left: 8px;
+.vocab-note-toast.vn-ok   { --vn-t: #34d399; }
+.vocab-note-toast.vn-warn { --vn-t: #fbbf24; }
+.vocab-note-toast.vn-undo { --vn-t: #aab3c5; }
+.vocab-note-toast .vn-toast-ico { background: color-mix(in srgb, var(--vn-t) 18%, transparent); color: var(--vn-t); }
+.vocab-note-toast .vn-toast-text { flex: 1; min-width: 0; word-break: break-word; }
+.vocab-note-toast .vn-toast-text b { font-weight: 700; color: #fff; }
+/* Nút hành động (Hoàn tác…): dạng chữ có nền khi rê, không phải khối trắng chói */
+.vocab-note-toast .vn-toast-act {
+  background: transparent;
+  color: #a5b4fc;
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 10px;
+  margin: -2px -2px -2px 2px;
   cursor: pointer;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
-.vocab-note-toast.vn-warn button { color: #f57c00; }
-/* Toast xoá (Hoàn tác): nền trung tính tối, nút trắng nổi bật làm điểm nhấn. */
-.vocab-note-toast.vn-undo { background: #2b2f38; }
-.vocab-note-toast.vn-undo button { color: #2b2f38; }
-
-@keyframes vn-slide-in {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+.vocab-note-toast .vn-toast-act:hover { background: rgba(165,180,252,0.16); color: #c7d2fe; }
+/* Thanh thời gian ở đáy: chạy hết thì toast tự đóng (rê chuột vào để tạm dừng) */
+.vocab-note-toast .vn-toast-bar {
+  position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
+  background: var(--vn-t); opacity: 0.6; transform-origin: left center;
+  animation: vn-toast-bar var(--vn-dur, 3200ms) linear forwards;
+}
+@keyframes vn-toast-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes vn-toast-in {
+  from { transform: translateY(10px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes vn-toast-out {
+  from { transform: translateY(0) scale(1); opacity: 1; }
+  to   { transform: translateY(6px) scale(0.97); opacity: 0; }
 }
 
 /* ============ MINI-CARD LƯU NHANH (sát chữ vừa chọn) ============ */
@@ -622,6 +641,9 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   max-width: 240px;
 }
 .vocab-note-sel-btn .vn-sel-brand { width: 15px; height: 15px; border-radius: 3px; flex-shrink: 0; }
+/* Chưa có nghĩa để hiện → bỏ luôn logo (đỡ 33px chiều rộng) và viền thừa của nút đầu. */
+.vocab-note-sel-btn .vn-sel-lead:not(:has(.vn-sel-trans:not(:empty))) { display: none; }
+.vocab-note-sel-btn .vn-sel-lead:not(:has(.vn-sel-trans:not(:empty))) + .vn-sel-act { border-left: 0; }
 .vocab-note-sel-btn .vn-sel-trans {
   color: #ffd54f; font-weight: 600;
   max-width: 200px; overflow: hidden; text-overflow: ellipsis;
@@ -639,25 +661,40 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   font: inherit;
   transition: background 0.12s;
 }
-.vocab-note-sel-btn .vn-sel-act { padding: 8px 12px; }
-.vocab-note-sel-btn .vn-sel-ico { padding: 8px 10px; color: #aaa; }
+.vocab-note-sel-btn .vn-sel-act { padding: 6px 10px; }
+/* Nghe / Sao chép: thu gọn, chỉ bung ra khi rê chuột vào thanh. */
+.vocab-note-sel-btn .vn-sel-ico {
+  padding: 6px 0; color: #aaa; max-width: 0; opacity: 0; overflow: hidden; border-left-width: 0;
+  transition: max-width 0.15s ease, padding 0.15s ease, opacity 0.15s ease;
+}
+.vocab-note-sel-btn:hover .vn-sel-ico { padding: 6px 8px; max-width: 34px; opacity: 1; border-left-width: 1px; }
 .vocab-note-sel-btn .vn-sel-act svg, .vocab-note-sel-btn .vn-sel-ico svg { width: 15px; height: 15px; }
 .vocab-note-sel-btn .vn-sel-act:hover, .vocab-note-sel-btn .vn-sel-ico:hover { background: rgba(255,255,255,0.1); color: #fff; }
 /* Lưu = hành động chính → nền màu nổi bật */
-.vocab-note-sel-btn .vn-sel-save { background: #4f46e5; border-left-color: #4f46e5; }
+.vocab-note-sel-btn .vn-sel-save { background: rgba(99,102,241,0.38); border-left-color: rgba(99,102,241,0.38); }
 .vocab-note-sel-btn .vn-sel-save:hover { background: #6366f1; }
 .vocab-note-sel-btn .vn-sel-saved { color: #86efac; cursor: default; }
 .vocab-note-sel-btn .vn-sel-saved:hover { background: transparent; }
 .vocab-note-sel-btn .vn-sel-copy.vn-sel-copied { color: #69db7c; background: rgba(105,219,124,0.12); }
 
 /* ============ THẺ DỊCH (chỉ xem, không lưu) ============ */
-.vocab-note-mini-card.vn-tr-card { border-top-color: #4f46e5; width: 340px; }
+.vocab-note-mini-card.vn-tr-card { border-top-color: #4f46e5; width: 384px; max-width: calc(100vw - 20px); }
 .vocab-note-mini-card.vn-long { width: 400px; max-width: calc(100vw - 20px); }
 .vocab-note-mini-card .vn-tr-title { font-weight: 800; font-size: 14px; margin-top: 1px; }
 .vocab-note-mini-card .vn-tr-langs {
   font-size: 10.5px; font-weight: 700; color: #bbb; margin-top: 2px;
   padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.08);
 }
+.vocab-note-mini-card .vn-tr-tl {
+  font: inherit; font-size: 11px; font-weight: 700; color: #fff; cursor: pointer;
+  background: rgba(255,255,255,0.14); border: 0; border-radius: 4px;
+  padding: 1px 2px; margin: 0 0 0 1px; outline: none; max-width: 150px;
+}
+.vocab-note-mini-card .vn-tr-tl:hover, .vocab-note-mini-card .vn-tr-tl:focus-visible { background: rgba(255,255,255,0.26); }
+.vocab-note-mini-card .vn-tr-btn[hidden] { display: none; }
+.vocab-note-mini-card .vn-tr-golink { color: #8ab4ff; font-weight: 700; text-decoration: none; }
+.vocab-note-mini-card .vn-tr-golink:hover { text-decoration: underline; }
+.vocab-note-mini-card .vn-tr-tl option { color: #111; background: #fff; }
 .vocab-note-mini-card .vn-tr-space { flex: 1; }
 .vocab-note-mini-card .vn-tr-body { padding: 2px 14px 10px; }
 .vocab-note-mini-card .vn-tr-word { display: flex; align-items: center; gap: 6px; font-size: 18px; color: #fff; margin-bottom: 2px; }
@@ -680,7 +717,7 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 .vocab-note-mini-card.vn-tr-card .vn-tr-out.vn-tr-loading,
 .vocab-note-mini-card.vn-tr-card .vn-tr-out.vn-tr-empty { color: #8a8a8a; font-size: 13px; font-weight: 400; }
 .vocab-note-mini-card .vn-tr-foot {
-  display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   padding: 10px 10px 10px 12px; border-top: 1px solid rgba(255,255,255,0.07);
 }
 .vocab-note-mini-card .vn-tr-btn {
@@ -694,7 +731,11 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
 .vocab-note-mini-card .vn-tr-btn svg { width: 14px; height: 14px; }
 .vocab-note-mini-card .vn-tr-saved { display: inline-flex; align-items: center; gap: 5px; color: #86efac; font-weight: 700; font-size: 12.5px; }
 .vocab-note-mini-card .vn-tr-saved svg { width: 14px; height: 14px; }
-.vocab-note-mini-card .vn-tr-foot .vn-mini-btn { padding: 7px 14px; flex-shrink: 0; white-space: nowrap; }
+.vocab-note-mini-card .vn-tr-foot .vn-mini-btn { padding: 7px 14px; flex-shrink: 0; white-space: nowrap; margin-left: auto; }
+.vocab-note-mini-card .vn-tr-foot .vn-tr-space { display: none; }
+.vocab-note-mini-card .vn-tr-foot .vn-tr-saved { margin-left: auto; }
+/* Nghe: chỉ icon (nhãn nằm trong tooltip) cho chân thẻ khỏi chật */
+.vocab-note-mini-card .vn-tr-listen span { display: none; }
 
 /* ============ THẺ LƯU: nhãn ô nhập, đoạn dài ============ */
 .vocab-note-mini-card .vn-mini-flabel {
@@ -802,6 +843,7 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   background: rgba(0,0,0,0.045); border-radius: 6px;
   padding: 6px 8px; margin-bottom: 8px;
 }
+.vocab-note-sticky .vns-hint svg { display: inline-block; vertical-align: -2px; }
 .vocab-note-sticky .vns-types {
   display: flex; align-items: center; gap: 5px;
   margin-bottom: 8px;
@@ -887,3 +929,23 @@ html[data-vocab-style="outline"] .vocab-note-highlight[data-level="hot"] { opaci
   color: var(--vns-accent, #ff5a5f);
 }
 .vocab-note-sticky.collapsed .vns-pin svg { width: 18px; height: 18px; display: block; }
+
+/* ============ CHUYỂN ĐỘNG ============ */
+/* Nhấn nút: lún nhẹ */
+.vocab-note-sel-btn button, .vocab-note-mini-card button, .vocab-note-toast button, .vocab-note-sticky button { transition-property: background, opacity, border-color, color, transform; }
+.vocab-note-sel-btn button:active, .vocab-note-mini-card button:active:not(:disabled),
+.vocab-note-toast button:active, .vocab-note-sticky button:active { transform: scale(0.95); transition-duration: 0.06s; }
+/* Vừa lưu: chỗ từ đó trên trang sáng lên một nhịp */
+.vocab-note-highlight.vn-flash { animation: vn-flash 0.9s ease-out; border-radius: 3px; }
+@keyframes vn-flash {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 213, 79, 0.85); background-color: rgba(255, 213, 79, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(255, 213, 79, 0); background-color: rgba(255, 213, 79, 0); }
+}
+/* Người dùng chọn "giảm chuyển động" trong hệ điều hành → tắt hết hiệu ứng của tiện ích */
+@media (prefers-reduced-motion: reduce) {
+  .vocab-note-sel-btn, .vocab-note-sel-btn *, .vocab-note-mini-card, .vocab-note-mini-card *,
+  .vocab-note-toast, .vocab-note-toast *, .vocab-note-sticky, .vocab-note-sticky *,
+  .vocab-note-tooltip, .vocab-note-tooltip *, .vocab-note-highlight.vn-flash {
+    animation: none !important; transition: none !important;
+  }
+}

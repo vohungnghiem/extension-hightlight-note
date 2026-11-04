@@ -135,9 +135,10 @@ Dữ liệu nằm trong 1 file `Highlight Note - Tu vung.json` trên Google Driv
 - Cùng một từ được thêm riêng ở 2 máy → giữ 1 bản.
 - Cài đặt (màu, phím tắt…) giữ riêng từng máy, không bị máy khác ghi đè.
 
-**Sao lưu file JSON** (Tải backup / Nạp lại) vẫn dùng song song, tự backup vào thư mục Tải về
-mỗi tuần. Khi dữ liệu chưa có bản nào ngoài máy, popup hiện dải nhắc (ẩn được 7 ngày) và icon có dấu `!`.
-Với người mới (dưới 20 mục và chưa dùng đủ 3 ngày) thì chưa nhắc và chưa tự tải file — rủi ro còn nhỏ, tránh làm phiền.
+**Sao lưu file JSON** (Tải backup / Nạp lại) vẫn dùng song song. **Tự sao lưu mỗi tuần vào thư mục Tải về
+là tuỳ chọn, TẮT mặc định** (bật ở Cài đặt → Sao lưu) — extension không tự tải file nào về máy nếu bạn không bật.
+Khi dữ liệu chưa có bản nào ngoài máy, popup hiện dải nhắc (ẩn được 7 ngày) và icon có dấu `!`.
+Với người mới (dưới 20 mục và chưa dùng đủ 3 ngày) thì chưa nhắc — rủi ro còn nhỏ, tránh làm phiền.
 
 > Bản 1.1 tự đồng bộ ngầm theo kiểu "cả cuốn, bản mới nhất thắng" nên một máy có dữ liệu cũ
 > có thể đè mất dữ liệu máy khác. Từ 1.2 đã bỏ hẳn; khi cập nhật, bản sao cũ trong Tài khoản
@@ -169,6 +170,8 @@ Bản phát hành đã cấu hình sẵn. Nếu tự build với Extension ID kh
 **Võ Hùng Nghiêm** — Developer. Tự dùng, tự build, tự sửa khi bug.
 
 Đóng góp / báo lỗi: mở issue hoặc PR.
+
+Ghi chú phát triển (thay đổi chưa phát hành, việc cần kiểm tra, backlog): [docs/NOTES.md](docs/NOTES.md).
 
 ---
 
